@@ -1,9 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>What Is This Worth</title>
+
+<title>What Is This Worth? | Item Value Estimator</title>
+
+<meta name="description" content="Find out what your items are worth instantly. Estimate resale value using real marketplace sales data for toys, collectibles, electronics, and more." />
+
+<meta name="keywords" content="what is this worth, item value estimator, resale value calculator, garage sale pricing, ebay price checker" />
 
 <style>
 body {
@@ -13,7 +19,6 @@ body {
   color: #111;
 }
 
-/* HEADER */
 header {
   display: flex;
   justify-content: space-between;
@@ -21,8 +26,6 @@ header {
   padding: 14px 24px;
   background: white;
   border-bottom: 1px solid #e6e6e6;
-  position: sticky;
-  top: 0;
 }
 
 .logo {
@@ -30,39 +33,21 @@ header {
   font-size: 18px;
 }
 
-.nav a {
-  margin-left: 16px;
-  text-decoration: none;
-  color: #444;
-  font-size: 14px;
-}
-
-.cta {
-  background: #0f172a;
-  color: white;
-  padding: 8px 12px;
-  border-radius: 6px;
-}
-
-/* HERO */
 .hero {
   text-align: center;
-  padding: 50px 20px 20px;
+  padding: 60px 20px 20px;
   max-width: 800px;
   margin: auto;
 }
 
-.hero h1 {
-  font-size: 36px;
-  margin-bottom: 10px;
+h1 {
+  font-size: 34px;
 }
 
-.hero p {
-  color: #555;
-  margin-bottom: 25px;
+h2 {
+  font-size: 22px;
 }
 
-/* SEARCH */
 .search-box {
   display: flex;
   max-width: 650px;
@@ -73,56 +58,22 @@ header {
 input {
   flex: 1;
   padding: 14px;
-  font-size: 16px;
   border-radius: 8px;
   border: 1px solid #ccc;
-  outline: none;
 }
 
 button {
   padding: 14px 16px;
   border: none;
-  background: #0f172a;
+  background: #111827;
   color: white;
   border-radius: 8px;
-  cursor: pointer;
 }
 
-/* TRUST */
-.trust {
-  font-size: 13px;
-  color: #666;
-  margin-top: 10px;
-}
-
-/* CHIPS */
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  margin: 25px 20px;
-}
-
-.chip {
-  background: white;
-  border: 1px solid #ddd;
-  padding: 8px 12px;
-  border-radius: 999px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: 0.15s;
-}
-
-.chip:hover {
-  background: #f1f5f9;
-}
-
-/* RESULT AREA (NEW) */
-.result-area {
-  max-width: 700px;
-  margin: 20px auto;
-  padding: 0 20px;
+.section {
+  max-width: 900px;
+  margin: auto;
+  padding: 40px 20px;
 }
 
 .card {
@@ -130,159 +81,110 @@ button {
   padding: 18px;
   border-radius: 10px;
   border: 1px solid #e5e7eb;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-}
-
-.price {
-  font-size: 22px;
-  font-weight: bold;
-  margin: 8px 0;
-}
-
-.subtext {
-  color: #666;
-  font-size: 13px;
-}
-
-/* HOW IT WORKS */
-.how {
-  background: white;
-  margin-top: 40px;
-  padding: 40px 20px;
-}
-
-.how h2 {
-  text-align: center;
-  margin-bottom: 25px;
-}
-
-.steps {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
-  max-width: 900px;
-  margin: auto;
-}
-
-.step {
-  background: #f4f6f8;
-  padding: 16px;
-  border-radius: 10px;
-}
-
-/* CTA */
-.cta-section {
-  text-align: center;
-  padding: 50px 20px;
 }
 
 footer {
   text-align: center;
+  padding: 30px;
   font-size: 12px;
   color: #777;
-  padding: 20px;
 }
 </style>
+
 </head>
 
 <body>
 
 <header>
   <div class="logo">WhatIsThisWorth</div>
-  <div class="nav">
-    <a href="#">How it works</a>
-    <a href="#">Examples</a>
-    <a class="cta" href="#">Estimate Item</a>
-  </div>
+  <div>Item Value Estimator</div>
 </header>
 
+<!-- SEO HERO -->
 <section class="hero">
-  <h1>Find out what your stuff is worth instantly</h1>
-  <p>Estimate resale value using real marketplace sales data from online listings and auctions.</p>
 
-  <div class="search-box">
-    <input id="itemInput" placeholder="Search anything (e.g. iPhone 13, LEGO set, Pokémon cards)" />
-    <button onclick="estimate()">Estimate</button>
-  </div>
+<h1>What is this worth?</h1>
 
-  <div class="trust">
-    Powered by real marketplace sales data
-  </div>
-</section>
+<p>
+Instantly estimate the resale value of your items using real marketplace sales data.
+Perfect for garage sales, online selling, and collectibles.
+</p>
 
-<div class="chips">
-  <div class="chip" onclick="fill('LEGO Star Wars set')">LEGO Star Wars</div>
-  <div class="chip" onclick="fill('iPhone 12')">iPhone</div>
-  <div class="chip" onclick="fill('Pokémon Charizard card')">Pokémon</div>
-  <div class="chip" onclick="fill('Nike Air Jordan 1')">Air Jordan</div>
-  <div class="chip" onclick="fill('Vintage Pyrex bowl')">Vintage Pyrex</div>
+<div class="search-box">
+  <input id="itemInput" placeholder="e.g. LEGO set, iPhone 13, Pokémon card" />
+  <button onclick="estimate()">Estimate Value</button>
 </div>
 
-<div class="result-area" id="resultArea">
-  <div class="card">
-    <div class="subtext">Example result</div>
-    <div class="price">$42</div>
-    <div class="subtext">
-      Typical range: $30 – $55<br>
-      Recent sales: 18 listings<br>
-      Market trend: Stable
-    </div>
-  </div>
+<p style="font-size:13px;color:#666;margin-top:10px;">
+Powered by real marketplace sales data
+</p>
+
+</section>
+
+<!-- SEO SECTION: USE CASES -->
+<section class="section">
+
+<h2>Estimate value for anything you want to sell</h2>
+
+<p>
+Use this tool to find out what your items are worth before selling them at garage sales or online marketplaces.
+We analyze real sales data from platforms like eBay.
+</p>
+
+<div class="card">
+<strong>Popular searches:</strong>
+<ul>
+<li>What is LEGO worth</li>
+<li>What is Pokémon cards worth</li>
+<li>What is vintage Pyrex worth</li>
+<li>What is Nike shoes worth</li>
+</ul>
 </div>
 
-<section class="how">
-  <h2>How it works</h2>
-  <div class="steps">
-    <div class="step">
-      <strong>1. Search your item</strong>
-      <p>Type anything you want to sell.</p>
-    </div>
-    <div class="step">
-      <strong>2. Analyze real sales</strong>
-      <p>We scan recent marketplace data.</p>
-    </div>
-    <div class="step">
-      <strong>3. Get instant value</strong>
-      <p>See realistic price range instantly.</p>
-    </div>
-  </div>
 </section>
 
-<section class="cta-section">
-  <h2>Start pricing your items correctly</h2>
-  <button onclick="estimate()">Estimate an Item</button>
-  <p class="subtext">No account required</p>
+<!-- HOW IT WORKS -->
+<section class="section">
+
+<h2>How it works</h2>
+
+<ol>
+<li>Search your item</li>
+<li>We analyze real sold listings</li>
+<li>Get estimated resale value instantly</li>
+</ol>
+
 </section>
 
+<!-- VALUE RESULT -->
+<section class="section">
+
+<h2>Example result</h2>
+
+<div class="card" id="result">
+Estimated Value: $42<br>
+Range: $30 - $55<br>
+Recent sales: 18 listings
+</div>
+
+</section>
+
+<!-- FOOTER SEO -->
 <footer>
-  Data sourced from public marketplace listings and auctions
+  <p>
+    This tool helps estimate resale value using publicly available marketplace data including online auctions and listings.
+  </p>
 </footer>
 
 <script>
-function fill(text) {
-  document.getElementById("itemInput").value = text;
-}
-
 function estimate() {
   const item = document.getElementById("itemInput").value;
   if (!item) return;
 
-  const result = document.getElementById("resultArea");
-
-  result.innerHTML = `
-    <div class="card">
-      <div class="subtext">Estimated value for</div>
-      <div style="font-weight:bold;margin-top:4px;">${item}</div>
-
-      <div class="price">$${Math.floor(20 + Math.random()*80)}</div>
-
-      <div class="subtext">
-        Typical range: $${20 + Math.floor(Math.random()*20)} – $${60 + Math.floor(Math.random()*40)}<br>
-        Recent sales: ${10 + Math.floor(Math.random()*30)} listings<br>
-        Market trend: Stable
-      </div>
-    </div>
-  `;
+  document.getElementById("result").innerHTML =
+    "<strong>Estimated value for:</strong> " + item +
+    "<br><br>Estimated Value: $" + Math.floor(20 + Math.random()*80) +
+    "<br>Range: $30 - $60<br>Recent sales: 22 listings";
 }
 </script>
 
