@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>What Is This Worth</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 700px;
+      margin: 60px auto;
+      padding: 0 16px;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: #555;
+      margin-bottom: 20px;
+    }
+
+    input {
+      width: 70%;
+      padding: 10px;
+      font-size: 16px;
+    }
+
+    button {
+      padding: 10px 15px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-left: 5px;
+    }
+
+    .box {
+      margin-top: 20px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      background: #fafafa;
+      white-space: pre-wrap;
+    }
+
+    .loading {
+      color: #888;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>What Is This Worth?</h1>
+  <p>Type any item to estimate its resale value using recent eBay sales data.</p>
+
+  <input id="search" placeholder="e.g. Nike Air Jordan 1, vintage toy, iPhone 12" />
+  <button onclick="searchItem()">Estimate Value</button>
+
+  <div id="results" class="box"></div>
+
+  <script>
+    async function searchItem() {
+      const query = document.getElementById("search").value;
+      const resultsBox = document.getElementById("results");
+
+      if (!query) {
+        resultsBox.innerText = "Please enter an item name.";
+        return;
+      }
+
+      resultsBox.innerText = "Analyzing recent sales data...";
+
+      try {
+        const res = await fetch(
+          "https://YOUR-BACKEND-URL/search?q=" + encodeURIComponent(query)
+        );
+
+        if (!res.ok) throw new Error("Network error");
+
+        const data = await res.json();
+
+        resultsBox.innerText =
+          "Estimated Value: " + data.estimated_value + "\n" +
+          "Typical Range: " + data.range + "\n" +
+          "Sales Analyzed: " + data.sales_found;
+      } catch (err) {
+        resultsBox.innerText =
+          "Could not fetch data. Please try again.";
+      }
+    }
+  </script>
+
+</body>
+</html>
