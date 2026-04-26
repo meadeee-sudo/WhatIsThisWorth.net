@@ -17,7 +17,7 @@
 
     header {
       text-align: center;
-      margin-bottom: 25px;
+      margin-bottom: 20px;
     }
 
     h1 {
@@ -61,10 +61,19 @@
       cursor: pointer;
     }
 
-    .hint {
+    .cta {
+      text-align: center;
+      margin: 15px 0 25px 0;
+    }
+
+    .cta strong {
+      font-size: 16px;
+      display: block;
+    }
+
+    .cta span {
       font-size: 13px;
       color: #777;
-      margin-bottom: 25px;
     }
 
     .card {
@@ -80,15 +89,6 @@
       margin-bottom: 10px;
     }
 
-    .pill {
-      display: inline-block;
-      background: #eee;
-      padding: 6px 10px;
-      border-radius: 20px;
-      font-size: 13px;
-      margin: 4px 4px 0 0;
-    }
-
     .result-value {
       font-size: 24px;
       font-weight: bold;
@@ -100,15 +100,18 @@
       color: #444;
     }
 
+    .pill {
+      display: inline-block;
+      background: #eee;
+      padding: 6px 10px;
+      border-radius: 20px;
+      font-size: 13px;
+      margin: 4px 4px 0 0;
+    }
+
     ol {
       padding-left: 18px;
       line-height: 1.6;
-    }
-
-    .cta {
-      text-align: center;
-      margin-top: 25px;
-      font-weight: bold;
     }
 
     .footer {
@@ -143,15 +146,17 @@
     <button onclick="searchItem()">Estimate Value</button>
   </div>
 
-  <div class="hint">
-    Powered by real marketplace sales data from online listings and auctions
+  <!-- MOVED CTA (FIXED FLOW) -->
+  <div class="cta">
+    <strong>Start pricing your items correctly</strong>
+    <span>No account or email required</span>
   </div>
 </header>
 
 <!-- RESULTS -->
 <div id="results"></div>
 
-<!-- EXAMPLE RESULT (fallback display) -->
+<!-- EXAMPLE RESULT -->
 <div class="card">
   <div class="section-title">Example Result</div>
 
@@ -184,12 +189,6 @@
     <li><b>Analyze real sales</b> – We scan recent marketplace sales data.</li>
     <li><b>Get value instantly</b> – See price range and market insights.</li>
   </ol>
-</div>
-
-<!-- CTA -->
-<div class="cta">
-  Start pricing your items correctly<br>
-  No account or email required
 </div>
 
 <!-- FOOTER -->
