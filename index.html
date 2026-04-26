@@ -1,63 +1,249 @@
-font-style: italic;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>What Is This Worth</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f7f7f8;
+      color: #111;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      padding: 16px 24px;
+      background: white;
+      border-bottom: 1px solid #eee;
+    }
+
+    .logo {
+      font-weight: bold;
+      font-size: 18px;
+    }
+
+    .nav a {
+      margin-left: 16px;
+      text-decoration: none;
+      color: #444;
+      font-size: 14px;
+    }
+
+    .cta {
+      background: black;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+    }
+
+    .hero {
+      text-align: center;
+      padding: 60px 20px 30px;
+      max-width: 800px;
+      margin: auto;
+    }
+
+    .hero h1 {
+      font-size: 38px;
+      margin-bottom: 12px;
+    }
+
+    .hero p {
+      color: #555;
+      font-size: 16px;
+      margin-bottom: 24px;
+    }
+
+    .search-box {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      max-width: 600px;
+      margin: auto;
+    }
+
+    input {
+      flex: 1;
+      padding: 14px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    button {
+      padding: 14px 18px;
+      border: none;
+      background: black;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .trust {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 13px;
+      color: #666;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin: 30px 20px;
+    }
+
+    .chip {
+      background: white;
+      border: 1px solid #ddd;
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .how {
+      background: white;
+      padding: 40px 20px;
+      margin-top: 40px;
+    }
+
+    .how h2 {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      max-width: 900px;
+      margin: auto;
+    }
+
+    .step {
+      background: #f7f7f8;
+      padding: 16px;
+      border-radius: 10px;
+    }
+
+    .preview {
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .box {
+      background: white;
+      border: 1px solid #ddd;
+      padding: 20px;
+      max-width: 400px;
+      margin: auto;
+      border-radius: 10px;
+      text-align: left;
+    }
+
+    .cta-section {
+      text-align: center;
+      padding: 50px 20px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 12px;
+      color: #777;
     }
   </style>
 </head>
 
 <body>
 
-  <h1>What Is This Worth?</h1>
-  <p>Instant resale value estimates based on recent :contentReference[oaicite:0]{index=0} sales data.</p>
+<header>
+  <div class="logo">WhatIsThisWorth</div>
+  <div class="nav">
+    <a href="#">How it works</a>
+    <a href="#">Examples</a>
+    <a href="#">About</a>
+    <a class="cta" href="#">Estimate Item</a>
+  </div>
+</header>
+
+<section class="hero">
+  <h1>Find out what your stuff is worth in seconds</h1>
+  <p>Instantly estimate resale value using real marketplace sales data from online listings and auctions.</p>
 
   <div class="search-box">
-    <input id="search" placeholder="e.g. Nike Jordan 1, vintage toy, iPhone 12" />
-    <button onclick="searchItem()">Estimate</button>
+    <input id="itemInput" placeholder="e.g. vintage Star Wars figure, iPhone 13, Nike shoes"/>
+    <button onclick="estimate()">Estimate Value</button>
   </div>
 
-  <div id="results"></div>
+  <div class="trust">
+    Powered by real marketplace sales data
+  </div>
+</section>
 
-  <script>
-    async function searchItem() {
-      const query = document.getElementById("search").value;
-      const results = document.getElementById("results");
+<div class="chips">
+  <div class="chip" onclick="fill('LEGO Star Wars set')">LEGO Star Wars set</div>
+  <div class="chip" onclick="fill('iPhone 12')">iPhone 12</div>
+  <div class="chip" onclick="fill('Pokémon cards Charizard')">Pokémon cards</div>
+  <div class="chip" onclick="fill('Nike Air Jordan 1')">Nike Air Jordan 1</div>
+  <div class="chip" onclick="fill('Vintage Pyrex bowl')">Vintage Pyrex</div>
+</div>
 
-      if (!query) {
-        results.innerHTML = "<div class='card'>Enter an item name.</div>";
-        return;
-      }
+<section class="preview">
+  <h2>Example Result</h2>
+  <div class="box">
+    <strong>Estimated Value:</strong> $42<br><br>
+    Typical range: $30 - $55<br>
+    Recent sales: 18 listings<br>
+    Market trend: Stable
+  </div>
+</section>
 
-      results.innerHTML = "<div class='card loading'>Analyzing recent sales...</div>";
+<section class="how">
+  <h2>How it works</h2>
+  <div class="steps">
+    <div class="step">
+      <strong>1. Search your item</strong>
+      <p>Type anything you want to sell.</p>
+    </div>
+    <div class="step">
+      <strong>2. Analyze real sales</strong>
+      <p>We scan recent marketplace sales data.</p>
+    </div>
+    <div class="step">
+      <strong>3. Get value instantly</strong>
+      <p>See price range and market insights.</p>
+    </div>
+  </div>
+</section>
 
-      try {
-        const res = await fetch(
-          "https://YOUR-BACKEND-URL/search?q=" + encodeURIComponent(query)
-        );
+<section class="cta-section">
+  <h2>Start pricing your items correctly</h2>
+  <button onclick="estimate()">Estimate an Item</button>
+  <p style="font-size:12px;color:#777;margin-top:10px;">No account required</p>
+</section>
 
-        if (!res.ok) throw new Error("API error");
+<footer>
+  Data sourced from public marketplace listings and auctions
+</footer>
 
-        const data = await res.json();
+<script>
+function fill(text) {
+  document.getElementById("itemInput").value = text;
+}
 
-        results.innerHTML = `
-          <div class="card">
-            <div class="price">${data.estimated_value}</div>
+function estimate() {
+  const item = document.getElementById("itemInput").value;
+  if (!item) return alert("Enter an item first");
 
-            <div class="range">
-              Typical range: ${data.range}
-            </div>
-
-            <div class="meta">
-              Based on ${data.sales_found} recent sales
-              <br>
-              Market trend: stable (demo)
-            </div>
-          </div>
-        `;
-
-      } catch (e) {
-        results.innerHTML =
-          "<div class='card'>Could not fetch data. Try again.</div>";
-      }
-    }
-  </script>
+  alert("Next step: connect this to your backend API for: " + item);
+}
+</script>
 
 </body>
 </html>
