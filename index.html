@@ -8,8 +8,8 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      max-width: 800px;
-      margin: 50px auto;
+      max-width: 850px;
+      margin: 40px auto;
       padding: 0 16px;
       background: #fafafa;
       color: #111;
@@ -17,7 +17,7 @@
 
     header {
       text-align: center;
-      margin-bottom: 30px;
+      margin-bottom: 25px;
     }
 
     h1 {
@@ -25,9 +25,15 @@
       margin-bottom: 5px;
     }
 
+    .nav {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 10px;
+    }
+
     .subtitle {
-      color: #555;
       font-size: 16px;
+      color: #444;
       margin-bottom: 20px;
     }
 
@@ -63,29 +69,13 @@
 
     .card {
       background: white;
-      padding: 16px;
+      padding: 18px;
       border-radius: 10px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.08);
       margin-top: 15px;
     }
 
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      font-size: 14px;
-      color: #444;
-    }
-
-    .label {
-      font-weight: bold;
-    }
-
-    .example-box {
-      margin-top: 30px;
-    }
-
-    .example-title {
+    .section-title {
       font-weight: bold;
       margin-bottom: 10px;
     }
@@ -98,6 +88,40 @@
       font-size: 13px;
       margin: 4px 4px 0 0;
     }
+
+    .result-value {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .meta {
+      font-size: 14px;
+      color: #444;
+    }
+
+    ol {
+      padding-left: 18px;
+      line-height: 1.6;
+    }
+
+    .cta {
+      text-align: center;
+      margin-top: 25px;
+      font-weight: bold;
+    }
+
+    .footer {
+      margin-top: 40px;
+      font-size: 12px;
+      text-align: center;
+      color: #777;
+    }
+
+    .loading {
+      color: #777;
+      font-style: italic;
+    }
   </style>
 </head>
 
@@ -106,13 +130,17 @@
 <header>
   <h1>WhatIsThisWorth</h1>
 
+  <div class="nav">
+    How it works | Examples | About | Estimate Item
+  </div>
+
   <div class="subtitle">
     Find out what your stuff is worth in seconds
   </div>
 
   <div class="search-box">
-    <input placeholder="e.g. vintage Star Wars figure, iPhone 13, Nike shoes" />
-    <button>Estimate Value</button>
+    <input id="search" placeholder="e.g. vintage Star Wars figure, iPhone 13, Nike shoes" />
+    <button onclick="searchItem()">Estimate Value</button>
   </div>
 
   <div class="hint">
@@ -120,23 +148,25 @@
   </div>
 </header>
 
-<!-- EXAMPLE RESULTS -->
-<div class="card">
-  <div class="label">Example Result</div>
-  <div style="font-size: 22px; margin-top: 8px;">
-    Estimated Value: $42
-  </div>
+<!-- RESULTS -->
+<div id="results"></div>
 
-  <div class="grid" style="margin-top: 10px;">
-    <div><span class="label">Typical range:</span> $30 – $55</div>
-    <div><span class="label">Recent sales:</span> 18 listings</div>
-    <div><span class="label">Market trend:</span> Stable</div>
+<!-- EXAMPLE RESULT (fallback display) -->
+<div class="card">
+  <div class="section-title">Example Result</div>
+
+  <div class="result-value">Estimated Value: $42</div>
+
+  <div class="meta">
+    Typical range: $30 – $55<br>
+    Recent sales: 18 listings<br>
+    Market trend: Stable
   </div>
 </div>
 
 <!-- POPULAR ITEMS -->
-<div class="card example-box">
-  <div class="example-title">Popular items people search</div>
+<div class="card">
+  <div class="section-title">Popular items people search</div>
 
   <span class="pill">LEGO Star Wars set</span>
   <span class="pill">iPhone 12</span>
@@ -144,6 +174,72 @@
   <span class="pill">Nike Air Jordan 1</span>
   <span class="pill">Vintage Pyrex</span>
 </div>
+
+<!-- HOW IT WORKS -->
+<div class="card">
+  <div class="section-title">How it works</div>
+
+  <ol>
+    <li><b>Search your item</b> – Type anything you want to sell.</li>
+    <li><b>Analyze real sales</b> – We scan recent marketplace sales data.</li>
+    <li><b>Get value instantly</b> – See price range and market insights.</li>
+  </ol>
+</div>
+
+<!-- CTA -->
+<div class="cta">
+  Start pricing your items correctly<br>
+  No account or email required
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  Disclaimer: Estimates are for informational purposes only and are not guaranteed resale values.  
+  Actual prices may vary based on condition and market demand.<br><br>
+
+  <a href="/terms.html">Terms of Service</a> |
+  <a href="/privacy.html">Privacy Policy</a>
+</div>
+
+<script>
+  async function searchItem() {
+    const query = document.getElementById("search").value;
+    const results = document.getElementById("results");
+
+    if (!query) {
+      results.innerHTML = "<div class='card'>Please enter an item name.</div>";
+      return;
+    }
+
+    results.innerHTML = "<div class='card loading'>Analyzing recent marketplace sales...</div>";
+
+    try {
+      const res = await fetch(
+        "https://YOUR-BACKEND-URL/search?q=" + encodeURIComponent(query)
+      );
+
+      if (!res.ok) throw new Error("API error");
+
+      const data = await res.json();
+
+      results.innerHTML = `
+        <div class="card">
+          <div class="result-value">${data.estimated_value}</div>
+
+          <div class="meta">
+            Typical range: ${data.range}<br>
+            Recent sales: ${data.sales_found} listings<br>
+            Market trend: Stable
+          </div>
+        </div>
+      `;
+
+    } catch (err) {
+      results.innerHTML =
+        "<div class='card'>Could not fetch data. Please try again.</div>";
+    }
+  }
+</script>
 
 </body>
 </html>
