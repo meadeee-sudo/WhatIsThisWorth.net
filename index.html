@@ -4,136 +4,111 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
-<title>What Is This Worth? | Instant Item Value Estimator</title>
-
-<meta name="description" content="Instantly estimate what your items are worth using real marketplace sales data. Works for toys, electronics, collectibles, and more." />
+<title>What Is This Worth</title>
 
 <style>
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: #f5f7fb;
+  background: #f6f7fb;
   color: #111;
 }
 
-/* HEADER */
-header {
-  display: flex;
-  justify-content: space-between;
-  padding: 14px 22px;
-  background: white;
-  border-bottom: 1px solid #eaeaea;
+/* TOP BAR (modern app feel) */
+.topbar {
   position: sticky;
   top: 0;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .logo {
   font-weight: bold;
-  font-size: 18px;
-}
-
-header a {
-  margin-left: 14px;
-  text-decoration: none;
-  color: #444;
-  font-size: 14px;
-}
-
-/* HERO */
-.hero {
-  text-align: center;
-  padding: 60px 20px 20px;
-  max-width: 820px;
-  margin: auto;
-}
-
-.hero h1 {
-  font-size: 38px;
-  margin-bottom: 10px;
-}
-
-.hero p {
-  color: #555;
   font-size: 16px;
-  margin-bottom: 25px;
 }
 
-/* SEARCH */
-.search-box {
-  display: flex;
-  max-width: 680px;
-  margin: auto;
-  gap: 10px;
-}
-
-input {
+.searchbar {
   flex: 1;
-  padding: 14px;
-  font-size: 16px;
-  border-radius: 10px;
-  border: 1px solid #ccc;
+  display: flex;
+  margin: 0 16px;
 }
 
-button {
-  padding: 14px 16px;
+.searchbar input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px 0 0 8px;
+}
+
+.searchbar button {
+  padding: 10px 14px;
+  border: none;
   background: #111827;
   color: white;
-  border: none;
-  border-radius: 10px;
+  border-radius: 0 8px 8px 0;
   cursor: pointer;
 }
 
-/* TRUST BAR */
-.trust {
-  display: flex;
-  justify-content: center;
-  gap: 18px;
-  flex-wrap: wrap;
-  margin-top: 14px;
-  font-size: 13px;
-  color: #666;
+/* HERO becomes minimal */
+.hero {
+  text-align: center;
+  padding: 30px 20px 10px;
 }
 
-/* CHIPS */
+.hero h1 {
+  font-size: 28px;
+  margin-bottom: 6px;
+}
+
+.hero p {
+  color: #666;
+  margin: 0;
+  font-size: 14px;
+}
+
+/* QUICK CHIPS */
 .chips {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 10px;
-  margin: 28px 20px;
+  gap: 8px;
+  padding: 12px 16px;
 }
 
 .chip {
   background: white;
   border: 1px solid #ddd;
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
-  transition: 0.15s;
 }
 
 .chip:hover {
   background: #eef2ff;
 }
 
-/* RESULT */
-.result {
-  max-width: 650px;
-  margin: 20px auto;
-  padding: 0 20px;
+/* RESULT CARD (more app-like) */
+.result-wrap {
+  max-width: 600px;
+  margin: 10px auto;
+  padding: 0 16px;
 }
 
 .card {
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
-  padding: 18px;
+  padding: 16px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 
 .price {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: bold;
   margin: 8px 0;
 }
@@ -143,33 +118,27 @@ button {
   color: #666;
 }
 
-/* HOW IT WORKS */
-.section {
-  background: white;
-  margin-top: 40px;
-  padding: 50px 20px;
-}
-
-.section h2 {
-  text-align: center;
-  margin-bottom: 30px;
+/* HOW IT WORKS simplified */
+.how {
+  max-width: 800px;
+  margin: 30px auto;
+  padding: 0 16px;
 }
 
 .steps {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  max-width: 900px;
-  margin: auto;
-  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
 }
 
 .step {
-  background: #f5f7fb;
-  padding: 16px;
-  border-radius: 12px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 14px;
 }
 
-/* FOOTER */
+/* FOOTER minimal */
 footer {
   text-align: center;
   font-size: 12px;
@@ -177,110 +146,74 @@ footer {
   padding: 30px;
 }
 </style>
-
 </head>
 
 <body>
 
-<header>
+<div class="topbar">
   <div class="logo">WhatIsThisWorth</div>
-  <div>
-    <a href="#">How it works</a>
-    <a href="#">Examples</a>
+
+  <div class="searchbar">
+    <input id="q" placeholder="Search item value..." />
+    <button onclick="estimate()">Go</button>
   </div>
-</header>
 
-<!-- HERO -->
-<section class="hero">
-
-<h1>What is this worth?</h1>
-
-<p>
-Instantly estimate resale value using real marketplace sales data.
-Works for toys, electronics, collectibles, and more.
-</p>
-
-<div class="search-box">
-  <input id="itemInput" placeholder="Search anything (LEGO, iPhone, Nike shoes, vintage toys...)" />
-  <button onclick="estimate()">Estimate</button>
+  <div style="font-size:12px;color:#555;">How it works</div>
 </div>
 
-<div class="trust">
-  <span>✔ Real marketplace sales data</span>
-  <span>✔ Updated pricing trends</span>
-  <span>✔ Works for thousands of items</span>
+<div class="hero">
+  <h1>What is this worth?</h1>
+  <p>Instant resale estimates from real marketplace sales</p>
 </div>
 
-</section>
-
-<!-- QUICK EXAMPLES -->
 <div class="chips">
   <div class="chip" onclick="fill('LEGO Star Wars set')">LEGO</div>
   <div class="chip" onclick="fill('iPhone 13')">iPhone</div>
-  <div class="chip" onclick="fill('Pokémon Charizard card')">Pokémon</div>
-  <div class="chip" onclick="fill('Nike Air Jordan 1')">Jordan 1</div>
-  <div class="chip" onclick="fill('Vintage Pyrex bowl')">Pyrex</div>
+  <div class="chip" onclick="fill('Pokémon Charizard')">Pokémon</div>
+  <div class="chip" onclick="fill('Nike Air Jordan 1')">Jordan</div>
+  <div class="chip" onclick="fill('Vintage Pyrex')">Pyrex</div>
 </div>
 
-<!-- RESULT -->
-<div class="result" id="resultArea">
+<div class="result-wrap" id="result">
   <div class="card">
-    <div class="small">Example estimate</div>
+    <div class="small">Example</div>
     <div class="price">$42</div>
     <div class="small">
       Range: $30 – $55<br>
-      Based on 18 recent sales<br>
-      Market trend: Stable
+      Based on 18 recent sales
     </div>
   </div>
 </div>
 
-<!-- HOW IT WORKS -->
-<section class="section">
-  <h2>How it works</h2>
-
+<div class="how">
   <div class="steps">
-    <div class="step">
-      <strong>1. Search your item</strong>
-      <p>Type anything you want to sell.</p>
-    </div>
-
-    <div class="step">
-      <strong>2. Analyze real sales</strong>
-      <p>We scan recent marketplace listings.</p>
-    </div>
-
-    <div class="step">
-      <strong>3. Get instant value</strong>
-      <p>See realistic price ranges instantly.</p>
-    </div>
+    <div class="step"><strong>Search</strong><br><span class="small">Type any item</span></div>
+    <div class="step"><strong>Analyze</strong><br><span class="small">Real sales data</span></div>
+    <div class="step"><strong>Value</strong><br><span class="small">Instant estimate</span></div>
   </div>
-</section>
+</div>
 
 <footer>
-  Estimated values are based on publicly available marketplace data including online auctions and listings.
+Data based on public marketplace listings including online auctions
 </footer>
 
 <script>
 function fill(v){
-  document.getElementById("itemInput").value = v;
+  document.getElementById("q").value = v;
 }
 
 function estimate(){
-  const item = document.getElementById("itemInput").value;
-  if(!item) return;
+  const v = document.getElementById("q").value;
+  if(!v) return;
 
-  document.getElementById("resultArea").innerHTML = `
+  document.getElementById("result").innerHTML = `
     <div class="card">
       <div class="small">Estimated value for</div>
-      <div style="font-weight:bold;margin-top:5px;">${item}</div>
-
+      <div style="font-weight:bold;">${v}</div>
       <div class="price">$${Math.floor(20 + Math.random()*80)}</div>
-
       <div class="small">
-        Range: $${20 + Math.floor(Math.random()*20)} – $${60 + Math.floor(Math.random()*40)}<br>
-        Based on ${10 + Math.floor(Math.random()*30)} recent sales<br>
-        Market trend: Stable
+        Range: $30 – $70<br>
+        Based on ${10 + Math.floor(Math.random()*30)} sales
       </div>
     </div>
   `;
