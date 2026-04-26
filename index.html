@@ -17,34 +17,49 @@
 
     header {
       text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 25px;
     }
 
     h1 {
-      font-size: 34px;
-      margin-bottom: 5px;
-    }
-
-    .nav {
-      font-size: 14px;
-      color: #666;
-      margin-bottom: 10px;
+      font-size: 36px;
+      margin-bottom: 8px;
     }
 
     .subtitle {
       font-size: 16px;
       color: #444;
+      margin-bottom: 18px;
+    }
+
+    .hero {
       margin-bottom: 20px;
+    }
+
+    .cta-block {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .cta-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .cta-sub {
+      font-size: 13px;
+      color: #777;
+      margin-bottom: 12px;
     }
 
     .search-box {
       display: flex;
       gap: 10px;
-      margin-bottom: 10px;
+      justify-content: center;
     }
 
     input {
-      flex: 1;
+      width: 60%;
       padding: 12px;
       font-size: 16px;
       border: 1px solid #ccc;
@@ -59,21 +74,6 @@
       border: none;
       border-radius: 6px;
       cursor: pointer;
-    }
-
-    .cta {
-      text-align: center;
-      margin: 15px 0 25px 0;
-    }
-
-    .cta strong {
-      font-size: 16px;
-      display: block;
-    }
-
-    .cta span {
-      font-size: 13px;
-      color: #777;
     }
 
     .card {
@@ -133,23 +133,20 @@
 <header>
   <h1>WhatIsThisWorth</h1>
 
-  <div class="nav">
-    How it works | Examples | About | Estimate Item
-  </div>
-
   <div class="subtitle">
     Find out what your stuff is worth in seconds
   </div>
 
-  <div class="search-box">
-    <input id="search" placeholder="e.g. vintage Star Wars figure, iPhone 13, Nike shoes" />
-    <button onclick="searchItem()">Estimate Value</button>
-  </div>
+  <div class="hero">
+    <div class="cta-block">
+      <div class="cta-title">Start pricing your items correctly</div>
+      <div class="cta-sub">No account or email required</div>
 
-  <!-- MOVED CTA (FIXED FLOW) -->
-  <div class="cta">
-    <strong>Start pricing your items correctly</strong>
-    <span>No account or email required</span>
+      <div class="search-box">
+        <input id="search" placeholder="e.g. iPhone 13, Pokémon card, Nike shoes" />
+        <button onclick="searchItem()">Estimate Value</button>
+      </div>
+    </div>
   </div>
 </header>
 
