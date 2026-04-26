@@ -1,247 +1,183 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>What Is This Worth</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      background: #f7f7f8;
-      color: #111;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>What Is This Worth</title>
 
-    header {
-      display: flex;
-      justify-content: space-between;
-      padding: 16px 24px;
-      background: white;
-      border-bottom: 1px solid #eee;
-    }
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f3f4f6;
+  color: #111;
+}
 
-    .logo {
-      font-weight: bold;
-      font-size: 18px;
-    }
+/* HEADER */
+.header {
+  position: sticky;
+  top: 0;
+  background: white;
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  gap: 16px;
+}
 
-    .nav a {
-      margin-left: 16px;
-      text-decoration: none;
-      color: #444;
-      font-size: 14px;
-    }
+.logo {
+  font-weight: bold;
+  font-size: 16px;
+  white-space: nowrap;
+}
 
-    .cta {
-      background: black;
-      color: white;
-      padding: 8px 12px;
-      border-radius: 6px;
-    }
+.search {
+  flex: 1;
+  display: flex;
+}
 
-    .hero {
-      text-align: center;
-      padding: 60px 20px 30px;
-      max-width: 800px;
-      margin: auto;
-    }
+.search input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px 0 0 6px;
+  font-size: 14px;
+}
 
-    .hero h1 {
-      font-size: 38px;
-      margin-bottom: 12px;
-    }
+.search button {
+  padding: 10px 14px;
+  border: none;
+  background: #111;
+  color: white;
+  border-radius: 0 6px 6px 0;
+  cursor: pointer;
+}
 
-    .hero p {
-      color: #555;
-      font-size: 16px;
-      margin-bottom: 24px;
-    }
+.header a {
+  font-size: 13px;
+  color: #444;
+  text-decoration: none;
+}
 
-    .search-box {
-      display: flex;
-      justify-content: center;
-      gap: 8px;
-      max-width: 600px;
-      margin: auto;
-    }
+/* HERO */
+.hero {
+  text-align: center;
+  padding: 30px 20px 10px;
+}
 
-    input {
-      flex: 1;
-      padding: 14px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      font-size: 16px;
-    }
+.hero p {
+  color: #555;
+  margin-top: 6px;
+}
 
-    button {
-      padding: 14px 18px;
-      border: none;
-      background: black;
-      color: white;
-      border-radius: 8px;
-      cursor: pointer;
-    }
+/* CHIPS */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+}
 
-    .trust {
-      text-align: center;
-      margin-top: 16px;
-      font-size: 13px;
-      color: #666;
-    }
+.chip {
+  background: white;
+  border: 1px solid #ddd;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+}
 
-    .chips {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 10px;
-      margin: 30px 20px;
-    }
+/* RESULTS GRID */
+.results {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  padding: 20px;
+  max-width: 1000px;
+  margin: auto;
+}
 
-    .chip {
-      background: white;
-      border: 1px solid #ddd;
-      padding: 8px 12px;
-      border-radius: 20px;
-      font-size: 13px;
-      cursor: pointer;
-    }
+.card {
+  background: white;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+}
 
-    .how {
-      background: white;
-      padding: 40px 20px;
-      margin-top: 40px;
-    }
+.price {
+  font-size: 18px;
+  font-weight: bold;
+  margin-top: 8px;
+}
 
-    .how h2 {
-      text-align: center;
-      margin-bottom: 24px;
-    }
-
-    .steps {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 20px;
-      max-width: 900px;
-      margin: auto;
-    }
-
-    .step {
-      background: #f7f7f8;
-      padding: 16px;
-      border-radius: 10px;
-    }
-
-    .preview {
-      text-align: center;
-      padding: 40px 20px;
-    }
-
-    .box {
-      background: white;
-      border: 1px solid #ddd;
-      padding: 20px;
-      max-width: 400px;
-      margin: auto;
-      border-radius: 10px;
-      text-align: left;
-    }
-
-    .cta-section {
-      text-align: center;
-      padding: 50px 20px;
-    }
-
-    footer {
-      text-align: center;
-      padding: 20px;
-      font-size: 12px;
-      color: #777;
-    }
-  </style>
+/* FOOTER */
+footer {
+  text-align: center;
+  font-size: 12px;
+  color: #777;
+  padding: 30px;
+}
+</style>
 </head>
 
 <body>
 
-<header>
+<div class="header">
   <div class="logo">WhatIsThisWorth</div>
-  <div class="nav">
-    <a href="#">How it works</a>
-    <a href="#">Examples</a>
-    <a href="#">About</a>
-    <a class="cta" href="#">Estimate Item</a>
-  </div>
-</header>
 
-<section class="hero">
-  <h1>Find out what your stuff is worth in seconds</h1>
-  <p>Instantly estimate resale value using real marketplace sales data from online listings and auctions.</p>
-
-  <div class="search-box">
-    <input id="itemInput" placeholder="e.g. vintage Star Wars figure, iPhone 13, Nike shoes"/>
-    <button onclick="estimate()">Estimate Value</button>
+  <div class="search">
+    <input id="q" placeholder="Search anything to estimate value..." />
+    <button onclick="search()">Search</button>
   </div>
 
-  <div class="trust">
-    Powered by real marketplace sales data
-  </div>
-</section>
-
-<div class="chips">
-  <div class="chip" onclick="fill('LEGO Star Wars set')">LEGO Star Wars set</div>
-  <div class="chip" onclick="fill('iPhone 12')">iPhone 12</div>
-  <div class="chip" onclick="fill('Pokémon cards Charizard')">Pokémon cards</div>
-  <div class="chip" onclick="fill('Nike Air Jordan 1')">Nike Air Jordan 1</div>
-  <div class="chip" onclick="fill('Vintage Pyrex bowl')">Vintage Pyrex</div>
+  <a href="#">How it works</a>
 </div>
 
-<section class="preview">
-  <h2>Example Result</h2>
-  <div class="box">
-    <strong>Estimated Value:</strong> $42<br><br>
-    Typical range: $30 - $55<br>
-    Recent sales: 18 listings<br>
-    Market trend: Stable
-  </div>
-</section>
+<div class="hero">
+  <p>Find real market value for anything you want to sell</p>
+</div>
 
-<section class="how">
-  <h2>How it works</h2>
-  <div class="steps">
-    <div class="step">
-      <strong>1. Search your item</strong>
-      <p>Type anything you want to sell.</p>
-    </div>
-    <div class="step">
-      <strong>2. Analyze real sales</strong>
-      <p>We scan recent marketplace sales data.</p>
-    </div>
-    <div class="step">
-      <strong>3. Get value instantly</strong>
-      <p>See price range and market insights.</p>
-    </div>
-  </div>
-</section>
+<div class="chips">
+  <div class="chip" onclick="fill('iPhone 13')">iPhone 13</div>
+  <div class="chip" onclick="fill('LEGO Star Wars')">LEGO Star Wars</div>
+  <div class="chip" onclick="fill('Nike Air Jordan 1')">Air Jordan</div>
+  <div class="chip" onclick="fill('Pokémon Charizard')">Pokémon</div>
+  <div class="chip" onclick="fill('Vintage Pyrex')">Vintage Pyrex</div>
+</div>
 
-<section class="cta-section">
-  <h2>Start pricing your items correctly</h2>
-  <button onclick="estimate()">Estimate an Item</button>
-  <p style="font-size:12px;color:#777;margin-top:10px;">No account required</p>
-</section>
+<div class="results" id="results">
+  <div class="card">
+    <div>Example Item</div>
+    <div class="price">$42</div>
+    <div style="font-size:12px;color:#666;">Range: $30 - $55</div>
+  </div>
+
+  <div class="card">
+    <div>Market Activity</div>
+    <div class="price">18 sales</div>
+    <div style="font-size:12px;color:#666;">Last 30 days</div>
+  </div>
+
+  <div class="card">
+    <div>Trend</div>
+    <div class="price">Stable</div>
+    <div style="font-size:12px;color:#666;">No major change</div>
+  </div>
+</div>
 
 <footer>
-  Data sourced from public marketplace listings and auctions
+  Data sourced from public marketplace listings and auctions including eBay
 </footer>
 
 <script>
-function fill(text) {
-  document.getElementById("itemInput").value = text;
+function fill(text){
+  document.getElementById("q").value = text;
 }
 
-function estimate() {
-  const item = document.getElementById("itemInput").value;
-  if (!item) return alert("Enter an item first");
-
-  alert("Next step: connect this to your backend API for: " + item);
+function search(){
+  const q = document.getElementById("q").value;
+  alert("Connect this to backend for: " + q);
 }
 </script>
 
