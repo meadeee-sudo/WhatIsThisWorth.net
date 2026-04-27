@@ -4,7 +4,6 @@ import requests
 import time
 import statistics
 from bs4 import BeautifulSoup
-import random
 import re
 
 app = Flask(__name__)
@@ -14,7 +13,7 @@ CORS(app)
 # CACHE
 # -----------------------------
 CACHE = {}
-CACHE_TTL = 60 * 60  # 1 hour
+CACHE_TTL = 60 * 60
 
 
 def get_cached(query):
@@ -34,85 +33,60 @@ def set_cache(query, data):
 # -----------------------------
 # CATEGORY DETECTION
 # -----------------------------
-def detect_category(query):
-    q = query.lower()
+def detect_category(q):
+    q = q.lower()
 
-    if any(x in q for x in ["iphone", "samsung", "pixel", "phone", "ipad"]):
+    if any(x in q for x in ["iphone", "ipad", "macbook", "samsung", "laptop"]):
         return "electronics"
 
-    if any(x in q for x in ["pokemon", "magic", "cards", "psa"]):
-        return "collectibles"
-
-    if any(x in q for x in ["lego"]):
-        return "toys"
-
-    if any(x in q for x in ["nike", "jordan", "adidas", "shoe"]):
+    if any(x in q for x in ["nike", "air jordan", "adidas", "yeezy"]):
         return "sneakers"
 
+    if any(x in q for x in ["lego", "pokemon", "funko"]):
+        return "collectibles"
+
     return "general"
-
-
-# -----------------------------
-# CONDITION DETECTION
-# -----------------------------
-def detect_condition(text):
-    t = text.lower()
-
-    if "brand new" in t or "new" in t:
-        return "new"
-    if "used" in t or "pre-owned" in t:
-        return "used"
-    if "refurbished" in t:
-        return "refurbished"
-    if "for parts" in t or "not working" in t:
-        return "parts"
-
-    return "unknown"
 
 
 # -----------------------------
 # PRICE PARSER
 # -----------------------------
 def parse_price(text):
-    match = re.findall(r"\d+\.?\d*", text.replace(",", ""))
-    if not match:
+    if not text:
         return None
-    return float(match[0])
+    text = text.replace(",", "")
+    match = re.findall(r"\d+\.?\d*", text)
+    return float(match[0]) if match else None
 
 
 # -----------------------------
-# EBAY SCRAPER (COMPS)
+# SCRAPER (EBAY SOLD)
 # -----------------------------
 def fetch_from_scrape(query):
     try:
         url = f"https://www.ebay.com/sch/i.html?_nkw={query}&LH_Sold=1&LH_Complete=1"
-
         headers = {"User-Agent": "Mozilla/5.0"}
 
         res = requests.get(url, headers=headers, timeout=5)
         soup = BeautifulSoup(res.text, "html.parser")
 
         comps = []
+
         items = soup.select(".s-item")
 
         for item in items:
-            title_tag = item.select_one(".s-item__title")
-            price_tag = item.select_one(".s-item__price")
+            title = item.select_one(".s-item__title")
+            price = item.select_one(".s-item__price")
+            link = item.select_one("a.s-item__link")
 
-            if not price_tag:
+            p = parse_price(price.get_text() if price else "")
+            if not p:
                 continue
-
-            price = parse_price(price_tag.get_text())
-            if not price:
-                continue
-
-            title = title_tag.get_text() if title_tag else ""
-            condition = detect_condition(title + " " + price_tag.get_text())
 
             comps.append({
-                "price": price,
-                "title": title,
-                "condition": condition
+                "price": p,
+                "title": title.get_text() if title else "",
+                "url": link["href"] if link else None
             })
 
         return comps
@@ -122,120 +96,148 @@ def fetch_from_scrape(query):
 
 
 # -----------------------------
-# FALLBACK DATA
-# -----------------------------
-def generate_fallback_prices(query):
-    base = random.randint(40, 300)
-    q = query.lower()
-
-    if "iphone" in q:
-        base = random.randint(250, 900)
-    elif "pokemon" in q:
-        base = random.randint(10, 250)
-    elif "lego" in q:
-        base = random.randint(20, 300)
-    elif "nike" in q:
-        base = random.randint(80, 500)
-
-    return [{"price": int(base * x), "title": "estimated"} for x in [0.8, 1.0, 1.2]]
-
-
-# -----------------------------
-# CLEANING
+# OUTLIER CLEANING
 # -----------------------------
 def clean_prices(prices):
-    if len(prices) < 5:
+    if len(prices) < 8:
         return prices
 
     prices.sort()
-
-    low = int(len(prices) * 0.15)
-    high = int(len(prices) * 0.85)
+    low = int(len(prices) * 0.12)
+    high = int(len(prices) * 0.88)
 
     return prices[low:high]
 
 
 # -----------------------------
-# ADJUST BY CONDITION
+# WEIGHTING MODEL
 # -----------------------------
-def adjust_by_condition(comps):
-    adjusted = []
+def weight(comp):
+    title = comp["title"].lower()
+    w = 1.0
 
-    for c in comps:
-        price = c["price"]
-        cond = c["condition"]
+    if "new" in title:
+        w *= 1.1
+    if "used" in title:
+        w *= 0.95
+    if "for parts" in title or "not working" in title:
+        w *= 0.4
 
-        if cond == "new":
-            price *= 1.05
-        elif cond == "used":
-            price *= 1.0
-        elif cond == "refurbished":
-            price *= 0.9
-        elif cond == "parts":
-            price *= 0.4
-
-        adjusted.append(price)
-
-    return adjusted
+    return w
 
 
 # -----------------------------
-# CALCULATION ENGINE
+# HISTOGRAM
 # -----------------------------
-def calculate(comps):
-    if len(comps) < 2:
+def build_histogram(prices):
+    if not prices:
+        return []
+
+    min_p = min(prices)
+    max_p = max(prices)
+
+    bins = 5
+    step = (max_p - min_p) / bins if max_p > min_p else 1
+
+    hist = [0] * bins
+
+    for p in prices:
+        idx = min(int((p - min_p) / step), bins - 1)
+        hist[idx] += 1
+
+    return hist
+
+
+# -----------------------------
+# ACCURACY SCORE
+# -----------------------------
+def accuracy(count):
+    if count >= 30:
+        return 95
+    if count >= 15:
+        return 85
+    if count >= 8:
+        return 70
+    return 50
+
+
+# -----------------------------
+# CATEGORY ADJUSTMENT
+# -----------------------------
+def adjust(price, category):
+    if category == "sneakers":
+        return price * 1.05
+    if category == "electronics":
+        return price * 0.98
+    if category == "collectibles":
+        return price * 1.10
+    return price
+
+
+# -----------------------------
+# MAIN CALCULATION
+# -----------------------------
+def calculate(comps, category):
+    if len(comps) < 3:
         return None
 
-    prices = adjust_by_condition(comps)
-    prices = clean_prices(prices)
+    prices = []
+    weighted_prices = []
 
-    median = int(statistics.median(prices))
+    for c in comps:
+        p = adjust(c["price"], category)
+        w = weight(c)
+
+        prices.append(p)
+        weighted_prices.extend([p] * max(1, int(w * 10)))
+
+    prices = clean_prices(prices)
+    weighted_prices = clean_prices(weighted_prices)
+
+    median = int(statistics.median(weighted_prices))
     low = int(min(prices))
     high = int(max(prices))
 
-    confidence = "High" if len(prices) > 20 else "Medium" if len(prices) > 8 else "Low"
+    p25 = int(statistics.median(prices[:len(prices)//2])) if prices else median
+    p75 = int(statistics.median(prices[len(prices)//2:])) if prices else median
 
     return {
         "estimated_value": f"${median}",
         "range": f"${low} - ${high}",
-        "sales_found": len(prices),
-        "confidence": confidence,
-        "why": [
-            f"Based on {len(prices)} recent comps",
-            "Outliers removed",
-            "Condition-adjusted pricing applied"
-        ],
-        "sample_comps": comps[:5]
+        "valuation_band": {
+            "min": low,
+            "p25": p25,
+            "median": median,
+            "p75": p75,
+            "max": high
+        },
+        "histogram": build_histogram(prices),
+        "sales_found": len(comps),
+        "confidence": "High" if len(comps) > 25 else "Medium" if len(comps) > 10 else "Low",
+        "accuracy_score": accuracy(len(comps)),
+        "comps": comps[:8]
     }
 
 
 # -----------------------------
-# HYBRID ENGINE
+# ESTIMATOR
 # -----------------------------
-def estimate_price(query):
+def estimate(query):
     cached = get_cached(query)
     if cached:
         return cached
 
-    comps = []
+    category = detect_category(query)
 
-    # Scraper (main source)
-    comps += fetch_from_scrape(query)
+    comps = fetch_from_scrape(query)
 
-    # Fallback if weak data
-    if len(comps) < 5:
-        comps += generate_fallback_prices(query)
-
-    result = calculate(comps)
+    result = calculate(comps, category)
 
     if not result:
         result = {
             "estimated_value": "N/A",
             "range": "N/A",
-            "sales_found": 0,
-            "confidence": "Low",
-            "why": [],
-            "sample_comps": []
+            "sales_found": 0
         }
 
     set_cache(query, result)
@@ -243,38 +245,21 @@ def estimate_price(query):
 
 
 # -----------------------------
-# RECENT SALES FEED (simple)
+# API
 # -----------------------------
-def get_recent_sales(query):
-    comps = fetch_from_scrape(query)
-    return comps[:10]
+@app.route("/search")
+def search():
+    q = request.args.get("q")
+    if not q:
+        return jsonify({"error": "missing query"}), 400
+
+    return jsonify(estimate(q))
 
 
-# -----------------------------
-# ROUTES
-# -----------------------------
 @app.route("/")
 def home():
     return "WhatIsThisWorth API running"
 
 
-@app.route("/search")
-def search():
-    query = request.args.get("q")
-
-    if not query:
-        return jsonify({"error": "Missing query"}), 400
-
-    result = estimate_price(query)
-
-    # optional: include recent comps feed
-    result["recent_sales"] = get_recent_sales(query)
-
-    return jsonify(result)
-
-
-# -----------------------------
-# RUN
-# -----------------------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
