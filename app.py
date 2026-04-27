@@ -13,7 +13,7 @@ CORS(app)
 # CACHE
 # -----------------------------
 CACHE = {}
-CACHE_TTL = 60 * 60  # 1 hour
+CACHE_TTL = 60 * 60
 
 
 def get_cached(query):
@@ -43,7 +43,8 @@ def safe_get(url):
 
     try:
         return requests.get(url, headers=headers, timeout=6)
-    except:
+    except Exception as e:
+        print("REQUEST ERROR:", e)
         return None
 
 
@@ -62,7 +63,6 @@ def parse_price(text):
 
     values = [float(n) for n in nums]
 
-    # handle "10 to 20"
     if "to" in text and len(values) >= 2:
         return (values[0] + values[1]) / 2
 
@@ -70,27 +70,28 @@ def parse_price(text):
 
 
 # -----------------------------
-# EBAY SOLD SCRAPER (CLEAN + RELIABLE)
+# EBAY SOLD SCRAPER
 # -----------------------------
 def fetch_from_scrape(query):
+    print("🔥 SCRAPER FUNCTION ENTERED")
+
     try:
         url = f"https://www.ebay.com/sch/i.html?_nkw={query}&LH_Sold=1&LH_Complete=1&_ipg=50"
 
         res = safe_get(url)
+
+        print("STATUS:", res.status_code if res else None)
+        print("HTML SIZE:", len(res.text) if res else None)
+        print("HAS s-item:", "s-item" in res.text if res else False)
+
         if not res or res.status_code != 200:
             return []
-
-        print("STATUS:", res.status_code)
-        print("HTML LENGTH:", len(res.text))
-        print("HAS s-item:", "s-item" in res.text)
 
         soup = BeautifulSoup(res.text, "html.parser")
 
         comps = []
 
-        # 🔥 more reliable selector
         items = soup.select("li.s-item")
-
         print("RAW ITEMS:", len(items))
 
         for item in items:
@@ -103,14 +104,8 @@ def fetch_from_scrape(query):
                     continue
 
                 title = title_el.get_text(strip=True)
-                price_text = price_el.get_text()
-                price = parse_price(price_text)
-
+                price = parse_price(price_el.get_text())
                 url = link_el["href"] if link_el and link_el.has_attr("href") else None
-
-                # DEBUG
-                # print("TITLE:", title)
-                # print("PRICE RAW:", price_text)
 
                 if not title or price is None:
                     continue
@@ -121,7 +116,7 @@ def fetch_from_scrape(query):
                     "url": url
                 })
 
-            except Exception as inner:
+            except Exception:
                 continue
 
         print("VALID COMPS:", len(comps))
@@ -129,11 +124,12 @@ def fetch_from_scrape(query):
         return comps
 
     except Exception as e:
-        print("scrape error:", e)
+        print("SCRAPER ERROR:", e)
         return []
 
+
 # -----------------------------
-# CACHE ESTIMATE
+# ESTIMATE
 # -----------------------------
 def estimate(query):
     cached = get_cached(query)
@@ -144,6 +140,7 @@ def estimate(query):
 
     if len(comps) == 0:
         result = {
+            "debug": "no comps returned",
             "estimated_value": "N/A",
             "range": "N/A",
             "sales_found": 0,
@@ -159,15 +156,15 @@ def estimate(query):
     low = int(min(prices))
     high = int(max(prices))
 
-    # sort comps (Zillow-style: low → high)
     comps_sorted = sorted(comps, key=lambda x: x["price"])
 
     result = {
+        "debug": "success",
         "estimated_value": f"${median}",
         "range": f"${low} - ${high}",
         "sales_found": len(comps_sorted),
 
-        # 🔥 SOLD COMPS WITH LINKS (MAIN FEATURE)
+        # SOLD COMPS WITH LINKS
         "comps": [
             {
                 "title": c["title"],
@@ -185,16 +182,20 @@ def estimate(query):
 
 
 # -----------------------------
-# API ROUTE
+# ROUTE (CRITICAL DEBUG VERSION)
 # -----------------------------
 @app.route("/search")
 def search():
+    print("🔥 SEARCH ROUTE HIT")
+
     q = request.args.get("q")
+    print("QUERY RECEIVED:", q)
 
-    if not q:
-        return jsonify({"error": "missing query"}), 400
+    result = estimate(q)
 
-    return jsonify(estimate(q))
+    print("🔥 FINAL RESULT KEYS:", list(result.keys()) if result else None)
+
+    return jsonify(result)
 
 
 # -----------------------------
