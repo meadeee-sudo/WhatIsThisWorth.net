@@ -5,7 +5,7 @@ import time
 import statistics
 from bs4 import BeautifulSoup
 import re
-from urllib.parse import quote_plus   # ✅ FIX ADDED
+from urllib.parse import quote_plus
 
 app = Flask(__name__)
 CORS(app)
@@ -36,7 +36,11 @@ def set_cache(query, data):
 # -----------------------------
 def safe_get(url):
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36",
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/122.0 Safari/537.36"
+        ),
         "Accept-Language": "en-US,en;q=0.9",
         "Accept": "text/html,application/xhtml+xml",
         "Connection": "close"
@@ -80,16 +84,23 @@ def parse_price(text):
 
 
 # -----------------------------
-# EBAY SOLD SCRAPER
+# EBAY SCRAPER (FIXED URL STRUCTURE)
 # -----------------------------
 def fetch_from_scrape(query):
     print("🔥 SCRAPER FUNCTION ENTERED")
 
     try:
-        # ✅ FIX: URL ENCODING
         encoded_query = quote_plus(query)
 
-        url = f"https://www.ebay.com/sch/i.html?_nkw={encoded_query}&LH_Sold=1&LH_Complete=1&_ipg=50"
+        # ✅ FIXED: more browser-like eBay search URL
+        url = (
+            "https://www.ebay.com/sch/i.html"
+            f"?_from=R40&_nkw={encoded_query}"
+            "&_sacat=0"
+            "&LH_Sold=1"
+            "&LH_Complete=1"
+            "&_ipg=50"
+        )
 
         res = safe_get(url)
 
@@ -195,7 +206,7 @@ def estimate(query):
 
 
 # -----------------------------
-# ROUTE DEBUG
+# ROUTE
 # -----------------------------
 @app.route("/search")
 def search():
