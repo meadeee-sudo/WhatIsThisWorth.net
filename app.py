@@ -31,21 +31,30 @@ def set_cache(query, data):
 
 
 # -----------------------------
-# SAFE REQUEST
+# SAFE REQUEST (FIXED + DEBUGGED)
 # -----------------------------
 def safe_get(url):
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36",
         "Accept-Language": "en-US,en;q=0.9",
         "Accept": "text/html,application/xhtml+xml",
-        "Connection": "keep-alive"
+        "Connection": "close"
     }
 
-    try:
-        return requests.get(url, headers=headers, timeout=6)
-    except Exception as e:
-        print("REQUEST ERROR:", e)
-        return None
+    print("🌐 REQUESTING:", url)
+
+    for attempt in range(3):
+        try:
+            res = requests.get(url, headers=headers, timeout=10)
+            print("🌐 STATUS:", res.status_code)
+            return res
+
+        except Exception as e:
+            print(f"❌ REQUEST ERROR (attempt {attempt+1}):", repr(e))
+            time.sleep(1)
+
+    print("❌ ALL REQUEST ATTEMPTS FAILED")
+    return None
 
 
 # -----------------------------
@@ -80,12 +89,12 @@ def fetch_from_scrape(query):
 
         res = safe_get(url)
 
-        print("STATUS:", res.status_code if res else None)
-        print("HTML SIZE:", len(res.text) if res else None)
-        print("HAS s-item:", "s-item" in res.text if res else False)
-
-        if not res or res.status_code != 200:
+        if not res:
+            print("❌ NO RESPONSE OBJECT")
             return []
+
+        print("HTML SIZE:", len(res.text))
+        print("HAS s-item:", "s-item" in res.text)
 
         soup = BeautifulSoup(res.text, "html.parser")
 
@@ -116,7 +125,8 @@ def fetch_from_scrape(query):
                     "url": url
                 })
 
-            except Exception:
+            except Exception as e:
+                print("ITEM PARSE ERROR:", e)
                 continue
 
         print("VALID COMPS:", len(comps))
@@ -124,7 +134,7 @@ def fetch_from_scrape(query):
         return comps
 
     except Exception as e:
-        print("SCRAPER ERROR:", e)
+        print("SCRAPER CRASH:", repr(e))
         return []
 
 
@@ -164,7 +174,6 @@ def estimate(query):
         "range": f"${low} - ${high}",
         "sales_found": len(comps_sorted),
 
-        # SOLD COMPS WITH LINKS
         "comps": [
             {
                 "title": c["title"],
@@ -182,7 +191,7 @@ def estimate(query):
 
 
 # -----------------------------
-# ROUTE (CRITICAL DEBUG VERSION)
+# ROUTE DEBUG
 # -----------------------------
 @app.route("/search")
 def search():
