@@ -54,7 +54,7 @@ def detect_category(q):
 def detect_condition(title):
     t = title.lower()
 
-    if any(x in t for x in ["brand new", "new in box", "sealed", "factory sealed"]):
+    if any(x in t for x in ["brand new", "new in box", "sealed"]):
         return "new"
 
     if "open box" in t:
@@ -63,7 +63,7 @@ def detect_condition(title):
     if any(x in t for x in ["used", "preowned", "pre-owned"]):
         return "used"
 
-    if any(x in t for x in ["for parts", "not working", "broken", "repair"]):
+    if any(x in t for x in ["broken", "not working", "for parts"]):
         return "damaged"
 
     return "unknown"
@@ -98,7 +98,7 @@ def parse_price(text):
 
 
 # -----------------------------
-# EBAY SCRAPER (IMPROVED)
+# EBAY SCRAPER
 # -----------------------------
 def fetch_from_scrape(query):
     try:
@@ -110,9 +110,7 @@ def fetch_from_scrape(query):
 
         html = res.text
 
-        # block detection
         if "captcha" in html.lower() or "robot" in html.lower():
-            print("eBay blocked request")
             return []
 
         soup = BeautifulSoup(html, "html.parser")
@@ -125,26 +123,19 @@ def fetch_from_scrape(query):
             price_el = item.select_one(".s-item__price")
             link_el = item.select_one("a.s-item__link")
 
-            title = title_el.get_text() if title_el else ""
-            price = parse_price(price_el.get_text() if price_el else "")
-
-            if not price:
+            if not title_el or not price_el:
                 continue
 
-            t = title.lower()
+            title = title_el.get_text().strip()
+            price = parse_price(price_el.get_text())
 
-            # junk filter
-            if any(x in t for x in ["shop on ebay", "see description", "various", "lot of"]):
-                continue
-
-            if price < 3:
+            if not title or not price:
                 continue
 
             comps.append({
-                "price": price,
                 "title": title,
-                "url": link_el["href"] if link_el else None,
-                "auction": "auction" in t
+                "price": price,
+                "url": link_el["href"] if link_el else None
             })
 
         return comps
@@ -154,7 +145,7 @@ def fetch_from_scrape(query):
 
 
 # -----------------------------
-# FALLBACK (ONLY IF SCRAPE FAILS)
+# FALLBACK
 # -----------------------------
 def fallback_simulated_comps(query):
     q = query.lower()
@@ -163,7 +154,7 @@ def fallback_simulated_comps(query):
 
     if "iphone" in q:
         base = 450
-    elif "air jordan" in q or "nike" in q:
+    elif "nike" in q or "air jordan" in q:
         base = 120
     elif "lego" in q:
         base = 80
@@ -171,14 +162,41 @@ def fallback_simulated_comps(query):
         base = 60
 
     return [
-        {"price": base * 0.9, "title": "Market fallback comp", "url": None, "auction": False},
-        {"price": base, "title": "Market fallback comp", "url": None, "auction": False},
-        {"price": base * 1.1, "title": "Market fallback comp", "url": None, "auction": False}
+        {"title": "Market fallback comp", "price": base * 0.9, "url": None},
+        {"title": "Market fallback comp", "price": base, "url": None},
+        {"title": "Market fallback comp", "price": base * 1.1, "url": None},
     ]
 
 
 # -----------------------------
-# CATEGORY ADJUSTMENT
+# COMP SCORING (ZILLOW CORE)
+# -----------------------------
+def comp_score(comp, query):
+    title = comp["title"].lower()
+    q = query.lower()
+
+    score = 0
+
+    for word in q.split():
+        if word in title:
+            score += 3
+
+    condition = detect_condition(title)
+
+    if condition == "new":
+        score += 3
+    elif condition == "open_box":
+        score += 2
+    elif condition == "used":
+        score += 1
+    elif condition == "damaged":
+        score -= 3
+
+    return score
+
+
+# -----------------------------
+# ADJUSTMENTS
 # -----------------------------
 def adjust(price, category):
     if category == "sneakers":
@@ -191,42 +209,15 @@ def adjust(price, category):
 
 
 # -----------------------------
-# WEIGHTING ENGINE
+# CLEAN
 # -----------------------------
-def weight(comp):
-    title = comp["title"]
-    t = title.lower()
-    w = 1.0
-
-    condition = detect_condition(t)
-
-    if condition == "new":
-        w *= 1.35
-    elif condition == "open_box":
-        w *= 1.15
-    elif condition == "used":
-        w *= 0.95
-    elif condition == "damaged":
-        w *= 0.3
-
-    if comp.get("auction"):
-        w *= 0.97
-
-    return w
-
-
-# -----------------------------
-# CLEAN PRICES
-# -----------------------------
-def clean_prices(prices):
-    if len(prices) < 8:
+def clean(prices):
+    if len(prices) < 6:
         return prices
 
     prices.sort()
-    low = int(len(prices) * 0.12)
-    high = int(len(prices) * 0.88)
-
-    return prices[low:high]
+    trim = int(len(prices) * 0.1)
+    return prices[trim:-trim]
 
 
 # -----------------------------
@@ -250,65 +241,87 @@ def stability(prices):
 # ACCURACY
 # -----------------------------
 def accuracy(count):
-    if count >= 40:
-        return 92
-    if count >= 25:
-        return 85
+    if count >= 30:
+        return 90
     if count >= 15:
-        return 78
+        return 80
     if count >= 8:
-        return 65
-    return 50
+        return 70
+    return 55
 
 
 # -----------------------------
-# CALCULATION ENGINE
+# MAIN CALCULATION
 # -----------------------------
-def calculate(comps, category):
+def calculate(comps, query, category):
     if len(comps) < 3:
         return None
 
-    prices = []
-    weighted_prices = []
-
+    # score comps
     for c in comps:
+        c["score"] = comp_score(c, query)
+
+    comps = sorted(comps, key=lambda x: x["score"], reverse=True)
+
+    best = comps[:10]
+
+    values = []
+    weighted = []
+
+    for c in best:
         p = adjust(c["price"], category)
-        w = weight(c)
+        w = max(1, c["score"] + 1)
 
-        prices.append(p)
-        weighted_prices.extend([p] * max(1, int(w * 10)))
+        values.append(p)
+        weighted.extend([p] * w)
 
-    prices = clean_prices(prices)
-    weighted_prices = clean_prices(weighted_prices)
+    values = clean(values)
+    weighted = clean(weighted)
 
-    weighted_prices.sort()
+    median = int(statistics.median(weighted))
 
-    median = int(statistics.median(weighted_prices))
-    low = int(min(prices))
-    high = int(max(prices))
+    low = int(min(values))
+    high = int(max(values))
 
-    n = len(prices)
-    p25 = int(prices[int(n * 0.25)]) if n > 4 else low
-    p75 = int(prices[int(n * 0.75)]) if n > 4 else high
+    confidence_score = 0
+
+    avg_score = sum(c["score"] for c in best) / len(best)
+
+    if len(best) >= 10:
+        confidence_score += 40
+    elif len(best) >= 5:
+        confidence_score += 25
+    else:
+        confidence_score += 15
+
+    if avg_score > 4:
+        confidence_score += 40
+    elif avg_score > 2:
+        confidence_score += 25
+    else:
+        confidence_score += 10
+
+    confidence = "High" if confidence_score >= 70 else "Medium" if confidence_score >= 40 else "Low"
 
     return {
         "estimated_value": f"${median}",
         "range": f"${low} - ${high}",
-        "valuation_band": {
-            "min": low,
-            "p25": p25,
-            "median": median,
-            "p75": p75,
-            "max": high
-        },
         "sales_found": len(comps),
 
-        # 🔥 KEY CHANGE: sorted comps (Zillow-style)
-        "comps": sorted(comps, key=lambda x: x["price"], reverse=True)[:12],
+        # Zillow-style comps
+        "comps": [
+            {
+                "title": c["title"],
+                "price": c["price"],
+                "url": c["url"],
+                "score": c["score"]
+            }
+            for c in best
+        ],
 
-        "confidence": "High" if len(comps) > 25 else "Medium" if len(comps) > 10 else "Low",
+        "confidence": confidence,
         "accuracy_score": accuracy(len(comps)),
-        "stability_score": stability(prices)
+        "stability_score": stability(values)
     }
 
 
@@ -321,14 +334,14 @@ def estimate(query):
         return cached
 
     category = detect_category(query)
+
     comps = fetch_from_scrape(query)
 
-    # 🔥 FIXED LOGIC (only fallback if ZERO results)
+    # ONLY fallback if no data
     if len(comps) == 0:
-        print("Using fallback comps")
         comps = fallback_simulated_comps(query)
 
-    result = calculate(comps, category)
+    result = calculate(comps, query, category)
 
     if not result:
         result = {
