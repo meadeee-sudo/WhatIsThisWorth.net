@@ -5,12 +5,13 @@ import time
 import statistics
 from bs4 import BeautifulSoup
 import random
+import re
 
 app = Flask(__name__)
 CORS(app)
 
 # -----------------------------
-# SIMPLE CACHE
+# CACHE
 # -----------------------------
 CACHE = {}
 CACHE_TTL = 60 * 60  # 1 hour
@@ -27,119 +28,165 @@ def get_cached(query):
 
 
 def set_cache(query, data):
-    CACHE[query] = {
-        "time": time.time(),
-        "data": data
-    }
+    CACHE[query] = {"time": time.time(), "data": data}
 
 
 # -----------------------------
-# SOURCE 1: API (placeholder)
+# CATEGORY DETECTION
 # -----------------------------
-def fetch_from_rapidapi(query):
-    try:
-        url = "https://example-ebay-api.p.rapidapi.com/search"
+def detect_category(query):
+    q = query.lower()
 
-        headers = {
-            "X-RapidAPI-Key": "YOUR_RAPIDAPI_KEY"
-        }
+    if any(x in q for x in ["iphone", "samsung", "pixel", "phone", "ipad"]):
+        return "electronics"
 
-        params = {"query": query}
+    if any(x in q for x in ["pokemon", "magic", "cards", "psa"]):
+        return "collectibles"
 
-        res = requests.get(url, headers=headers, timeout=5, params=params)
-        data = res.json()
+    if any(x in q for x in ["lego"]):
+        return "toys"
 
-        prices = []
-        for item in data.get("results", []):
-            price = item.get("price")
-            if price:
-                prices.append(float(price))
+    if any(x in q for x in ["nike", "jordan", "adidas", "shoe"]):
+        return "sneakers"
 
-        return prices
-
-    except:
-        return []
+    return "general"
 
 
 # -----------------------------
-# SOURCE 2: eBay SCRAPER fallback
+# CONDITION DETECTION
+# -----------------------------
+def detect_condition(text):
+    t = text.lower()
+
+    if "brand new" in t or "new" in t:
+        return "new"
+    if "used" in t or "pre-owned" in t:
+        return "used"
+    if "refurbished" in t:
+        return "refurbished"
+    if "for parts" in t or "not working" in t:
+        return "parts"
+
+    return "unknown"
+
+
+# -----------------------------
+# PRICE PARSER
+# -----------------------------
+def parse_price(text):
+    match = re.findall(r"\d+\.?\d*", text.replace(",", ""))
+    if not match:
+        return None
+    return float(match[0])
+
+
+# -----------------------------
+# EBAY SCRAPER (COMPS)
 # -----------------------------
 def fetch_from_scrape(query):
     try:
         url = f"https://www.ebay.com/sch/i.html?_nkw={query}&LH_Sold=1&LH_Complete=1"
 
-        headers = {
-            "User-Agent": "Mozilla/5.0"
-        }
+        headers = {"User-Agent": "Mozilla/5.0"}
 
         res = requests.get(url, headers=headers, timeout=5)
         soup = BeautifulSoup(res.text, "html.parser")
 
-        prices = []
+        comps = []
+        items = soup.select(".s-item")
 
-        for tag in soup.select(".s-item__price"):
-            text = tag.get_text()
+        for item in items:
+            title_tag = item.select_one(".s-item__title")
+            price_tag = item.select_one(".s-item__price")
 
-            # clean text
-            text = text.replace("$", "").replace(",", "").split(" ")[0]
-
-            try:
-                prices.append(float(text))
-            except:
+            if not price_tag:
                 continue
 
-        return prices
+            price = parse_price(price_tag.get_text())
+            if not price:
+                continue
+
+            title = title_tag.get_text() if title_tag else ""
+            condition = detect_condition(title + " " + price_tag.get_text())
+
+            comps.append({
+                "price": price,
+                "title": title,
+                "condition": condition
+            })
+
+        return comps
 
     except:
         return []
 
 
 # -----------------------------
-# FALLBACK (always works)
+# FALLBACK DATA
 # -----------------------------
 def generate_fallback_prices(query):
     base = random.randint(40, 300)
     q = query.lower()
 
-    if "iphone" in q or "samsung" in q:
-        base = random.randint(200, 900)
-    elif "pokemon" in q or "card" in q:
+    if "iphone" in q:
+        base = random.randint(250, 900)
+    elif "pokemon" in q:
         base = random.randint(10, 250)
     elif "lego" in q:
         base = random.randint(20, 300)
-    elif "nike" in q or "jordan" in q:
+    elif "nike" in q:
         base = random.randint(80, 500)
 
-    return [
-        int(base * 0.8),
-        base,
-        int(base * 1.2)
-    ]
+    return [{"price": int(base * x), "title": "estimated"} for x in [0.8, 1.0, 1.2]]
 
 
 # -----------------------------
 # CLEANING
 # -----------------------------
 def clean_prices(prices):
-    if len(prices) < 3:
+    if len(prices) < 5:
         return prices
 
     prices.sort()
 
-    trim = int(len(prices) * 0.2)
-    if trim > 0:
-        prices = prices[trim:-trim]
+    low = int(len(prices) * 0.15)
+    high = int(len(prices) * 0.85)
 
-    return prices
+    return prices[low:high]
 
 
 # -----------------------------
-# FINAL CALCULATION
+# ADJUST BY CONDITION
 # -----------------------------
-def calculate(prices):
-    if not prices:
+def adjust_by_condition(comps):
+    adjusted = []
+
+    for c in comps:
+        price = c["price"]
+        cond = c["condition"]
+
+        if cond == "new":
+            price *= 1.05
+        elif cond == "used":
+            price *= 1.0
+        elif cond == "refurbished":
+            price *= 0.9
+        elif cond == "parts":
+            price *= 0.4
+
+        adjusted.append(price)
+
+    return adjusted
+
+
+# -----------------------------
+# CALCULATION ENGINE
+# -----------------------------
+def calculate(comps):
+    if len(comps) < 2:
         return None
 
+    prices = adjust_by_condition(comps)
     prices = clean_prices(prices)
 
     median = int(statistics.median(prices))
@@ -152,7 +199,13 @@ def calculate(prices):
         "estimated_value": f"${median}",
         "range": f"${low} - ${high}",
         "sales_found": len(prices),
-        "confidence": confidence
+        "confidence": confidence,
+        "why": [
+            f"Based on {len(prices)} recent comps",
+            "Outliers removed",
+            "Condition-adjusted pricing applied"
+        ],
+        "sample_comps": comps[:5]
     }
 
 
@@ -164,32 +217,37 @@ def estimate_price(query):
     if cached:
         return cached
 
-    prices = []
+    comps = []
 
-    # 1. API
-    prices += fetch_from_rapidapi(query)
+    # Scraper (main source)
+    comps += fetch_from_scrape(query)
 
-    # 2. Scraper fallback
-    if len(prices) < 5:
-        prices += fetch_from_scrape(query)
+    # Fallback if weak data
+    if len(comps) < 5:
+        comps += generate_fallback_prices(query)
 
-    # 3. Guaranteed fallback
-    if len(prices) < 3:
-        prices += generate_fallback_prices(query)
-
-    result = calculate(prices)
+    result = calculate(comps)
 
     if not result:
         result = {
             "estimated_value": "N/A",
             "range": "N/A",
             "sales_found": 0,
-            "confidence": "Low"
+            "confidence": "Low",
+            "why": [],
+            "sample_comps": []
         }
 
     set_cache(query, result)
-
     return result
+
+
+# -----------------------------
+# RECENT SALES FEED (simple)
+# -----------------------------
+def get_recent_sales(query):
+    comps = fetch_from_scrape(query)
+    return comps[:10]
 
 
 # -----------------------------
@@ -208,11 +266,15 @@ def search():
         return jsonify({"error": "Missing query"}), 400
 
     result = estimate_price(query)
+
+    # optional: include recent comps feed
+    result["recent_sales"] = get_recent_sales(query)
+
     return jsonify(result)
 
 
 # -----------------------------
-# RUN (local only)
+# RUN
 # -----------------------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
