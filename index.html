@@ -2,78 +2,192 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>WhatIsThisWorth</title>
 
 <style>
-body { font-family: Arial; max-width: 900px; margin: 40px auto; background:#fafafa; }
-.card { background:#fff; padding:18px; border-radius:10px; margin-top:15px; }
-h1 { text-align:center; }
-input { width:60%; padding:12px; }
-button { padding:12px; background:black; color:white; border:none; }
+body {
+  font-family: Arial;
+  margin: 0;
+  background: #f6f6f6;
+}
+
+.header {
+  padding: 25px;
+  text-align: center;
+  background: white;
+  border-bottom: 1px solid #ddd;
+}
+
+.container {
+  display: flex;
+  max-width: 1100px;
+  margin: 30px auto;
+  gap: 20px;
+  padding: 0 16px;
+}
+
+/* LEFT PANEL */
+.left {
+  flex: 1;
+}
+
+input {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  margin-top: 10px;
+}
+
+button {
+  width: 100%;
+  padding: 14px;
+  margin-top: 10px;
+  background: black;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+/* RIGHT PANEL (ZILLOW STYLE RESULTS) */
+.right {
+  flex: 1;
+  background: white;
+  padding: 18px;
+  border-radius: 10px;
+  min-height: 300px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.card {
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 10px;
+  border: 1px solid #eee;
+}
+
+.price {
+  font-size: 26px;
+  font-weight: bold;
+}
+
+.small {
+  font-size: 13px;
+  color: #666;
+}
 
 .bar {
-  height:10px;
-  background:linear-gradient(90deg,#22c55e,#eab308,#ef4444);
-  border-radius:6px;
-  margin-top:10px;
-  position:relative;
+  height: 10px;
+  background: linear-gradient(90deg,#22c55e,#eab308,#ef4444);
+  border-radius: 6px;
+  margin-top: 10px;
+  position: relative;
 }
 
 .dot {
-  width:12px; height:12px; background:white;
-  border:2px solid black; border-radius:50%;
-  position:absolute; top:-2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid black;
+  background: white;
+  position: absolute;
+  top: -2px;
 }
 
-.comp { font-size:13px; margin-top:6px; padding-left:8px; border-left:3px solid #ddd; }
+.section {
+  margin-top: 20px;
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
+}
 
-.small { font-size:12px; color:#666; }
+.footer {
+  text-align: center;
+  font-size: 12px;
+  color: #666;
+  margin: 40px 0;
+}
 </style>
 </head>
 
 <body>
 
-<h1>WhatIsThisWorth</h1>
-
-<div style="text-align:center;">
-  <input id="q" placeholder="iPhone 15, Jordan 1, LEGO set">
-  <button onclick="go()">Estimate</button>
+<div class="header">
+  <h1>WhatIsThisWorth</h1>
+  <p>Real resale value estimates from marketplace data</p>
 </div>
 
-<div id="out"></div>
+<div class="container">
+
+  <!-- LEFT SIDE -->
+  <div class="left">
+    <h3>Estimate an item</h3>
+
+    <input id="q" placeholder="iPhone 15, Jordan 1, LEGO set" />
+    <button onclick="go()">Estimate Value</button>
+
+    <div class="section">
+      <h3>How it works</h3>
+      <p>1. Search item</p>
+      <p>2. Analyze real sales</p>
+      <p>3. Get price range</p>
+    </div>
+
+    <div class="section">
+      <h3>Disclaimer</h3>
+      <p>Estimates are informational only and not guaranteed resale values.</p>
+    </div>
+  </div>
+
+  <!-- RIGHT SIDE -->
+  <div class="right" id="out">
+    <h3>Results</h3>
+    <p class="small">Enter an item to see valuation</p>
+  </div>
+
+</div>
+
+<div class="footer">
+  <a href="/terms.html">Terms</a> |
+  <a href="/privacy.html">Privacy</a>
+</div>
 
 <script>
 async function go() {
-  let q = document.getElementById("q").value;
+  const q = document.getElementById("q").value;
+  const out = document.getElementById("out");
 
-  let res = await fetch("https://whatisthisworth-net.onrender.com/search?q=" + encodeURIComponent(q));
-  let data = await res.json();
+  out.innerHTML = "<p>Analyzing marketplace data...</p>";
 
-  let band = data.valuation_band || {};
-  let comps = data.comps || [];
+  try {
+    const res = await fetch(
+      "https://whatisthisworth-net.onrender.com/search?q=" + encodeURIComponent(q)
+    );
 
-  let min = band.min || 0;
-  let max = band.max || 1;
-  let med = band.median || 0;
+    const data = await res.json();
 
-  let pos = ((med - min) / (max - min)) * 100;
+    const band = data.valuation_band || {};
+    const min = band.min || 0;
+    const max = band.max || 1;
+    const med = band.median || 0;
 
-  let compHTML = comps.map(c =>
-    `<div class="comp">💰 $${c.price} — <a href="${c.url}" target="_blank">${c.title}</a></div>`
-  ).join("");
+    const pos = ((med - min) / (max - min)) * 100;
 
-  let hist = (data.histogram || []).map(h =>
-    `<div style="height:${h*6}px;width:15px;background:#3b82f6;display:inline-block;margin-right:3px;"></div>`
-  ).join("");
+    let comps = (data.comps || []).slice(0, 5).map(c =>
+      `<div class="card">
+        💰 $${c.price}<br>
+        <a href="${c.url}" target="_blank">${c.title}</a>
+      </div>`
+    ).join("");
 
-  document.getElementById("out").innerHTML = `
-    <div class="card">
-      <h2>${data.estimated_value}</h2>
+    out.innerHTML = `
+      <div class="price">${data.estimated_value}</div>
 
       <div class="small">
-        Range: ${data.range} <br>
-        Sales: ${data.sales_found} <br>
-        Confidence: ${data.confidence} <br>
+        Range: ${data.range}<br>
+        Sales: ${data.sales_found}<br>
+        Confidence: ${data.confidence}<br>
         Accuracy: ${data.accuracy_score}%
       </div>
 
@@ -81,13 +195,13 @@ async function go() {
         <div class="dot" style="left:${pos}%"></div>
       </div>
 
-      <h3>Price Distribution</h3>
-      ${hist}
-
       <h3>Recent Sales</h3>
-      ${compHTML}
-    </div>
-  `;
+      ${comps}
+    `;
+
+  } catch (e) {
+    out.innerHTML = "<p>Error loading data</p>";
+  }
 }
 </script>
 
