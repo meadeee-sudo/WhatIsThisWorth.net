@@ -36,16 +36,37 @@ def set_cache(query, data):
 def detect_category(q):
     q = q.lower()
 
-    if any(x in q for x in ["iphone", "ipad", "macbook", "samsung", "laptop"]):
+    if any(x in q for x in ["iphone", "ipad", "macbook", "samsung", "laptop", "apple watch"]):
         return "electronics"
 
-    if any(x in q for x in ["nike", "air jordan", "adidas", "yeezy"]):
+    if any(x in q for x in ["nike", "air jordan", "adidas", "yeezy", "sneaker"]):
         return "sneakers"
 
-    if any(x in q for x in ["lego", "pokemon", "funko"]):
+    if any(x in q for x in ["lego", "pokemon", "funko", "card"]):
         return "collectibles"
 
     return "general"
+
+
+# -----------------------------
+# CONDITION DETECTION (NEW)
+# -----------------------------
+def detect_condition(title):
+    t = title.lower()
+
+    if any(x in t for x in ["brand new", "new in box", "sealed", "factory sealed"]):
+        return "new"
+
+    if "open box" in t:
+        return "open_box"
+
+    if any(x in t for x in ["used", "preowned", "pre-owned"]):
+        return "used"
+
+    if any(x in t for x in ["for parts", "not working", "broken", "repair"]):
+        return "damaged"
+
+    return "unknown"
 
 
 # -----------------------------
@@ -60,7 +81,7 @@ def parse_price(text):
 
 
 # -----------------------------
-# SCRAPER (EBAY SOLD)
+# SCRAPER
 # -----------------------------
 def fetch_from_scrape(query):
     try:
@@ -75,18 +96,29 @@ def fetch_from_scrape(query):
         items = soup.select(".s-item")
 
         for item in items:
-            title = item.select_one(".s-item__title")
-            price = item.select_one(".s-item__price")
-            link = item.select_one("a.s-item__link")
+            title_el = item.select_one(".s-item__title")
+            price_el = item.select_one(".s-item__price")
+            link_el = item.select_one("a.s-item__link")
 
-            p = parse_price(price.get_text() if price else "")
-            if not p:
+            title = title_el.get_text() if title_el else ""
+            price = parse_price(price_el.get_text() if price_el else "")
+
+            if not price:
+                continue
+
+            # FILTER JUNK LISTINGS
+            t = title.lower()
+            if any(x in t for x in ["shop on ebay", "see description", "various", "lot of"]):
+                continue
+
+            if price < 3:
                 continue
 
             comps.append({
-                "price": p,
-                "title": title.get_text() if title else "",
-                "url": link["href"] if link else None
+                "price": price,
+                "title": title,
+                "url": link_el["href"] if link_el else None,
+                "auction": "auction" in t
             })
 
         return comps
@@ -96,7 +128,47 @@ def fetch_from_scrape(query):
 
 
 # -----------------------------
-# OUTLIER CLEANING
+# CATEGORY ADJUSTMENT
+# -----------------------------
+def adjust(price, category):
+    if category == "sneakers":
+        return price * 1.06
+    if category == "electronics":
+        return price * 0.97
+    if category == "collectibles":
+        return price * 1.12
+    return price
+
+
+# -----------------------------
+# WEIGHTING SYSTEM (UPGRADED)
+# -----------------------------
+def weight(comp):
+    title = comp["title"]
+    t = title.lower()
+    w = 1.0
+
+    condition = detect_condition(t)
+
+    # CONDITION IMPACT
+    if condition == "new":
+        w *= 1.35
+    elif condition == "open_box":
+        w *= 1.15
+    elif condition == "used":
+        w *= 0.95
+    elif condition == "damaged":
+        w *= 0.3
+
+    # AUCTION PENALTY
+    if comp.get("auction"):
+        w *= 0.97
+
+    return w
+
+
+# -----------------------------
+# CLEAN PRICES
 # -----------------------------
 def clean_prices(prices):
     if len(prices) < 8:
@@ -110,20 +182,35 @@ def clean_prices(prices):
 
 
 # -----------------------------
-# WEIGHTING MODEL
+# STABILITY SCORE
 # -----------------------------
-def weight(comp):
-    title = comp["title"].lower()
-    w = 1.0
+def stability(prices):
+    if len(prices) < 5:
+        return 50
 
-    if "new" in title:
-        w *= 1.1
-    if "used" in title:
-        w *= 0.95
-    if "for parts" in title or "not working" in title:
-        w *= 0.4
+    mean = statistics.mean(prices)
+    variance = sum((x - mean) ** 2 for x in prices) / len(prices)
 
-    return w
+    if variance < mean * 0.05:
+        return 90
+    if variance < mean * 0.15:
+        return 75
+    return 55
+
+
+# -----------------------------
+# ACCURACY
+# -----------------------------
+def accuracy(count):
+    if count >= 40:
+        return 92
+    if count >= 25:
+        return 85
+    if count >= 15:
+        return 78
+    if count >= 8:
+        return 65
+    return 50
 
 
 # -----------------------------
@@ -149,33 +236,7 @@ def build_histogram(prices):
 
 
 # -----------------------------
-# ACCURACY SCORE
-# -----------------------------
-def accuracy(count):
-    if count >= 30:
-        return 95
-    if count >= 15:
-        return 85
-    if count >= 8:
-        return 70
-    return 50
-
-
-# -----------------------------
-# CATEGORY ADJUSTMENT
-# -----------------------------
-def adjust(price, category):
-    if category == "sneakers":
-        return price * 1.05
-    if category == "electronics":
-        return price * 0.98
-    if category == "collectibles":
-        return price * 1.10
-    return price
-
-
-# -----------------------------
-# MAIN CALCULATION
+# CALCULATION ENGINE
 # -----------------------------
 def calculate(comps, category):
     if len(comps) < 3:
@@ -198,8 +259,9 @@ def calculate(comps, category):
     low = int(min(prices))
     high = int(max(prices))
 
-    p25 = int(statistics.median(prices[:len(prices)//2])) if prices else median
-    p75 = int(statistics.median(prices[len(prices)//2:])) if prices else median
+    n = len(prices)
+    p25 = int(prices[int(n * 0.25)]) if n > 4 else low
+    p75 = int(prices[int(n * 0.75)]) if n > 4 else high
 
     return {
         "estimated_value": f"${median}",
@@ -215,12 +277,13 @@ def calculate(comps, category):
         "sales_found": len(comps),
         "confidence": "High" if len(comps) > 25 else "Medium" if len(comps) > 10 else "Low",
         "accuracy_score": accuracy(len(comps)),
+        "stability_score": stability(prices),
         "comps": comps[:8]
     }
 
 
 # -----------------------------
-# ESTIMATOR
+# MAIN ESTIMATE
 # -----------------------------
 def estimate(query):
     cached = get_cached(query)
@@ -228,7 +291,6 @@ def estimate(query):
         return cached
 
     category = detect_category(query)
-
     comps = fetch_from_scrape(query)
 
     result = calculate(comps, category)
@@ -237,7 +299,11 @@ def estimate(query):
         result = {
             "estimated_value": "N/A",
             "range": "N/A",
-            "sales_found": 0
+            "sales_found": 0,
+            "confidence": "Low",
+            "accuracy_score": 0,
+            "stability_score": 0,
+            "comps": []
         }
 
     set_cache(query, result)
