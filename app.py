@@ -5,6 +5,7 @@ import time
 import statistics
 from bs4 import BeautifulSoup
 import re
+from urllib.parse import quote_plus   # ✅ FIX ADDED
 
 app = Flask(__name__)
 CORS(app)
@@ -31,7 +32,7 @@ def set_cache(query, data):
 
 
 # -----------------------------
-# SAFE REQUEST (FIXED + DEBUGGED)
+# SAFE REQUEST
 # -----------------------------
 def safe_get(url):
     headers = {
@@ -85,7 +86,10 @@ def fetch_from_scrape(query):
     print("🔥 SCRAPER FUNCTION ENTERED")
 
     try:
-        url = f"https://www.ebay.com/sch/i.html?_nkw={query}&LH_Sold=1&LH_Complete=1&_ipg=50"
+        # ✅ FIX: URL ENCODING
+        encoded_query = quote_plus(query)
+
+        url = f"https://www.ebay.com/sch/i.html?_nkw={encoded_query}&LH_Sold=1&LH_Complete=1&_ipg=50"
 
         res = safe_get(url)
 
