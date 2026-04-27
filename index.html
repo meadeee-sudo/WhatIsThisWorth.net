@@ -86,9 +86,9 @@
     }
 
     .result-value {
-      font-size: 24px;
+      font-size: 26px;
       font-weight: bold;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
 
     .meta {
@@ -112,6 +112,47 @@
       color: #777;
       font-style: italic;
     }
+
+    /* Zillow-style bar */
+    .bar {
+      position: relative;
+      height: 10px;
+      background: linear-gradient(90deg, #22c55e, #eab308, #ef4444);
+      border-radius: 6px;
+      margin-top: 10px;
+    }
+
+    .median-dot {
+      width: 12px;
+      height: 12px;
+      background: white;
+      border: 2px solid #111;
+      border-radius: 50%;
+      position: absolute;
+      top: -2px;
+      transform: translateX(-50%);
+    }
+
+    .comp {
+      font-size: 13px;
+      margin-top: 6px;
+      color: #333;
+      padding: 6px;
+      border-left: 3px solid #ddd;
+    }
+
+    .confidence {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #2563eb;
+    }
+
+    .why {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #666;
+    }
+
   </style>
 </head>
 
@@ -135,15 +176,12 @@
   </div>
 </header>
 
-<!-- RESULTS -->
 <div id="results"></div>
 
-<!-- EXAMPLE RESULT -->
+<!-- EXAMPLE -->
 <div class="card">
   <div class="section-title">Example Result</div>
-
   <div class="result-value">Estimated Value: $42</div>
-
   <div class="meta">
     Typical range: $30 – $55<br>
     Recent sales: 18 listings<br>
@@ -154,7 +192,6 @@
 <!-- HOW IT WORKS -->
 <div class="card">
   <div class="section-title">How it works</div>
-
   <ol>
     <li><b>Search your item</b> – Type anything you want to sell.</li>
     <li><b>Analyze real sales</b> – We scan recent marketplace sales data.</li>
@@ -164,51 +201,75 @@
 
 <!-- FOOTER -->
 <div class="footer">
-  Disclaimer: Estimates are for informational purposes only and are not guaranteed resale values.  
-  Actual prices may vary based on condition and market demand.<br><br>
+  Disclaimer: Estimates are for informational purposes only and are not guaranteed resale values. Actual prices may vary based on condition and market demand.<br><br>
 
   <a href="/terms.html">Terms of Service</a> |
   <a href="/privacy.html">Privacy Policy</a>
 </div>
 
 <script>
-  async function searchItem() {
-    const query = document.getElementById("search").value;
-    const results = document.getElementById("results");
+async function searchItem() {
+  const query = document.getElementById("search").value;
+  const results = document.getElementById("results");
 
-    if (!query) {
-      results.innerHTML = "<div class='card'>Please enter an item name.</div>";
-      return;
-    }
-
-    results.innerHTML = "<div class='card loading'>Analyzing recent marketplace sales...</div>";
-
-    try {
-      const res = await fetch(
-        "https://whatisthisworth-net.onrender.com/search?q=" + encodeURIComponent(query)
-      );
-
-      if (!res.ok) throw new Error("API error");
-
-      const data = await res.json();
-
-      results.innerHTML = `
-        <div class="card">
-          <div class="result-value">${data.estimated_value}</div>
-
-          <div class="meta">
-            Typical range: ${data.range}<br>
-            Recent sales: ${data.sales_found} listings<br>
-            Market trend: Stable
-          </div>
-        </div>
-      `;
-
-    } catch (err) {
-      results.innerHTML =
-        "<div class='card'>Could not fetch data. Please try again.</div>";
-    }
+  if (!query) {
+    results.innerHTML = "<div class='card'>Please enter an item name.</div>";
+    return;
   }
+
+  results.innerHTML = "<div class='card loading'>Analyzing recent marketplace sales...</div>";
+
+  try {
+    const res = await fetch(
+      "https://whatisthisworth-net.onrender.com/search?q=" + encodeURIComponent(query)
+    );
+
+    const data = await res.json();
+
+    const band = data.valuation_band || {};
+    const comps = data.comps || [];
+
+    let medianPos = 50;
+    if (band.max && band.min && band.median) {
+      medianPos = ((band.median - band.min) / (band.max - band.min)) * 100;
+    }
+
+    let compsHTML = "";
+    comps.slice(0, 6).forEach(c => {
+      compsHTML += `<div class="comp">💰 $${c.price} — ${c.title || "Item"}</div>`;
+    });
+
+    results.innerHTML = `
+      <div class="card">
+
+        <div class="result-value">${data.estimated_value}</div>
+
+        <div class="meta">
+          Typical range: ${data.range}<br>
+          Recent sales: ${data.sales_found} listings
+        </div>
+
+        <div class="bar">
+          <div class="median-dot" style="left:${medianPos}%"></div>
+        </div>
+
+        <div class="confidence">Confidence: ${data.confidence || "Low"}</div>
+
+        <div class="why">
+          ${(data.why || []).join("<br>")}
+        </div>
+
+        <div class="section-title" style="margin-top:12px;">Recent Comparable Sales</div>
+        ${compsHTML}
+
+      </div>
+    `;
+
+  } catch (err) {
+    results.innerHTML =
+      "<div class='card'>Could not fetch data. Please try again.</div>";
+  }
+}
 </script>
 
 </body>
