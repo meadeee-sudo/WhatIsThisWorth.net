@@ -74,45 +74,63 @@ def parse_price(text):
 # -----------------------------
 def fetch_from_scrape(query):
     try:
-        url = f"https://www.ebay.com/sch/i.html?_nkw={query}&LH_Sold=1&LH_Complete=1"
+        url = f"https://www.ebay.com/sch/i.html?_nkw={query}&LH_Sold=1&LH_Complete=1&_ipg=50"
 
         res = safe_get(url)
         if not res or res.status_code != 200:
             return []
 
+        print("STATUS:", res.status_code)
+        print("HTML LENGTH:", len(res.text))
+        print("HAS s-item:", "s-item" in res.text)
+
         soup = BeautifulSoup(res.text, "html.parser")
 
         comps = []
-        items = soup.select(".s-item")
+
+        # 🔥 more reliable selector
+        items = soup.select("li.s-item")
+
+        print("RAW ITEMS:", len(items))
 
         for item in items:
-            title_el = item.select_one(".s-item__title")
-            price_el = item.select_one(".s-item__price")
-            link_el = item.select_one("a.s-item__link")
+            try:
+                title_el = item.select_one(".s-item__title")
+                price_el = item.select_one(".s-item__price")
+                link_el = item.select_one("a")
 
-            if not title_el or not price_el:
+                if not title_el or not price_el:
+                    continue
+
+                title = title_el.get_text(strip=True)
+                price_text = price_el.get_text()
+                price = parse_price(price_text)
+
+                url = link_el["href"] if link_el and link_el.has_attr("href") else None
+
+                # DEBUG
+                # print("TITLE:", title)
+                # print("PRICE RAW:", price_text)
+
+                if not title or price is None:
+                    continue
+
+                comps.append({
+                    "title": title,
+                    "price": price,
+                    "url": url
+                })
+
+            except Exception as inner:
                 continue
 
-            title = title_el.get_text().strip()
-            price = parse_price(price_el.get_text())
-
-            if not title or price is None:
-                continue
-
-            url = link_el["href"] if link_el else None
-
-            comps.append({
-                "title": title,
-                "price": price,
-                "url": url
-            })
+        print("VALID COMPS:", len(comps))
 
         return comps
 
     except Exception as e:
         print("scrape error:", e)
         return []
-
 
 # -----------------------------
 # CACHE ESTIMATE
