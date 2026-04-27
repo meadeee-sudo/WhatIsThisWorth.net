@@ -98,7 +98,7 @@ def parse_price(text):
 
 
 # -----------------------------
-# EBAY SCRAPER (HARDENED)
+# EBAY SCRAPER (IMPROVED)
 # -----------------------------
 def fetch_from_scrape(query):
     try:
@@ -133,7 +133,7 @@ def fetch_from_scrape(query):
 
             t = title.lower()
 
-            # junk filtering
+            # junk filter
             if any(x in t for x in ["shop on ebay", "see description", "various", "lot of"]):
                 continue
 
@@ -154,7 +154,7 @@ def fetch_from_scrape(query):
 
 
 # -----------------------------
-# FALLBACK COMP SYSTEM (SAFETY NET)
+# FALLBACK (ONLY IF SCRAPE FAILS)
 # -----------------------------
 def fallback_simulated_comps(query):
     q = query.lower()
@@ -230,7 +230,7 @@ def clean_prices(prices):
 
 
 # -----------------------------
-# STABILITY SCORE
+# STABILITY
 # -----------------------------
 def stability(prices):
     if len(prices) < 5:
@@ -247,7 +247,7 @@ def stability(prices):
 
 
 # -----------------------------
-# ACCURACY MODEL
+# ACCURACY
 # -----------------------------
 def accuracy(count):
     if count >= 40:
@@ -281,6 +281,8 @@ def calculate(comps, category):
     prices = clean_prices(prices)
     weighted_prices = clean_prices(weighted_prices)
 
+    weighted_prices.sort()
+
     median = int(statistics.median(weighted_prices))
     low = int(min(prices))
     high = int(max(prices))
@@ -300,15 +302,18 @@ def calculate(comps, category):
             "max": high
         },
         "sales_found": len(comps),
+
+        # 🔥 KEY CHANGE: sorted comps (Zillow-style)
+        "comps": sorted(comps, key=lambda x: x["price"], reverse=True)[:12],
+
         "confidence": "High" if len(comps) > 25 else "Medium" if len(comps) > 10 else "Low",
         "accuracy_score": accuracy(len(comps)),
-        "stability_score": stability(prices),
-        "comps": comps[:8]
+        "stability_score": stability(prices)
     }
 
 
 # -----------------------------
-# MAIN ESTIMATE
+# ESTIMATE
 # -----------------------------
 def estimate(query):
     cached = get_cached(query)
@@ -316,11 +321,10 @@ def estimate(query):
         return cached
 
     category = detect_category(query)
-
     comps = fetch_from_scrape(query)
 
-    # HYBRID SAFETY NET
-    if len(comps) < 3:
+    # 🔥 FIXED LOGIC (only fallback if ZERO results)
+    if len(comps) == 0:
         print("Using fallback comps")
         comps = fallback_simulated_comps(query)
 
@@ -342,7 +346,7 @@ def estimate(query):
 
 
 # -----------------------------
-# API ROUTE
+# API
 # -----------------------------
 @app.route("/search")
 def search():
