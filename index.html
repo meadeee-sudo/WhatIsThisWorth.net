@@ -6,9 +6,13 @@
 <title>WhatIsThisWorth</title>
 
 <style>
+* {
+  box-sizing: border-box;
+}
+
 body {
-  font-family: Arial;
   margin: 0;
+  font-family: Arial;
   background: #f6f6f6;
 }
 
@@ -20,35 +24,29 @@ body {
   border-bottom: 1px solid #ddd;
 }
 
-/* MAIN LAYOUT (FIXED) */
+/* GRID LAYOUT (LOCKED) */
 .container {
-  display: flex;
-  align-items: flex-start;   /* KEY FIX */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 20px;
   max-width: 1100px;
   margin: 30px auto;
   padding: 0 16px;
+  align-items: start;
 }
 
-/* LEFT PANEL */
-.left {
-  flex: 1;
-  position: relative;
-  z-index: 1;
+/* PANELS */
+.left, .right {
+  background: transparent;
 }
 
-/* RIGHT PANEL */
+/* RIGHT PANEL (RESULTS) */
 .right {
-  flex: 1;
   background: white;
   padding: 18px;
   border-radius: 10px;
   min-height: 350px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-  position: relative;
-  z-index: 1;
-  align-self: flex-start; /* KEY FIX */
-  overflow: auto;
 }
 
 /* INPUT */
@@ -57,20 +55,19 @@ input {
   padding: 14px;
   font-size: 16px;
   margin-top: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 button {
   width: 100%;
   padding: 14px;
-  margin-top: 10px;
   background: black;
   color: white;
   border: none;
   cursor: pointer;
 }
 
-/* CARDS */
+/* CARD */
 .card {
   background: white;
   padding: 15px;
@@ -89,33 +86,14 @@ button {
   color: #666;
 }
 
-/* BAR */
-.bar {
-  height: 10px;
-  background: linear-gradient(90deg,#22c55e,#eab308,#ef4444);
-  border-radius: 6px;
-  margin-top: 10px;
-  position: relative;
-}
-
-.dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  border: 2px solid black;
-  background: white;
-  position: absolute;
-  top: -2px;
-}
-
 /* LOADER */
 .loader {
-  display: inline-block;
   width: 14px;
   height: 14px;
   border: 2px solid #ccc;
   border-top: 2px solid black;
   border-radius: 50%;
+  display: inline-block;
   animation: spin 0.8s linear infinite;
 }
 
@@ -123,25 +101,10 @@ button {
   100% { transform: rotate(360deg); }
 }
 
-/* SUGGESTIONS */
-#suggestions {
-  font-size: 13px;
-  color: #444;
-}
-
-/* FOOTER */
-.footer {
-  text-align: center;
-  font-size: 12px;
-  color: #666;
-  margin: 40px 0;
-  padding: 10px;
-}
-
-/* MOBILE FIX */
+/* MOBILE */
 @media (max-width: 800px) {
   .container {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
 }
 </style>
@@ -161,8 +124,6 @@ button {
     <h3>Estimate an item</h3>
 
     <input id="q" placeholder="iPhone 15, Jordan 1, LEGO set" />
-    <div id="suggestions"></div>
-
     <button onclick="go()">Estimate Value</button>
 
     <div class="card">
@@ -186,60 +147,18 @@ button {
 
 </div>
 
-<div class="footer">
-  <a href="/terms.html">Terms</a> |
-  <a href="/privacy.html">Privacy</a>
-</div>
-
 <script>
-const popular = [
-  "iPhone 15",
-  "iPhone 14",
-  "Air Jordan 1",
-  "LEGO Star Wars set",
-  "Pokémon cards",
-  "PS5 console",
-  "Funko Pop",
-  "Apple AirPods"
-];
-
-/* ENTER KEY */
 document.getElementById("q").addEventListener("keydown", function(e) {
   if (e.key === "Enter") go();
 });
 
-/* SUGGESTIONS */
-document.getElementById("q").addEventListener("input", function(e) {
-  let v = e.target.value.toLowerCase();
-  let box = document.getElementById("suggestions");
-
-  if (!v) {
-    box.innerHTML = "";
-    return;
-  }
-
-  let matches = popular.filter(i => i.toLowerCase().includes(v));
-
-  box.innerHTML = matches.slice(0, 5).map(m =>
-    `<div onclick="selectItem('${m}')" style="cursor:pointer; padding:4px 0;">
-      🔎 ${m}
-    </div>`
-  ).join("");
-});
-
-function selectItem(val) {
-  document.getElementById("q").value = val;
-  document.getElementById("suggestions").innerHTML = "";
-}
-
-/* MAIN FUNCTION */
 async function go() {
   const q = document.getElementById("q").value;
   const out = document.getElementById("out");
 
   out.innerHTML = `
     <div class="card">
-      <span class="loader"></span> Analyzing real marketplace sales...
+      <span class="loader"></span> Analyzing marketplace data...
     </div>
   `;
 
@@ -250,37 +169,15 @@ async function go() {
 
     const data = await res.json();
 
-    const band = data.valuation_band || {};
-    const min = band.min || 0;
-    const max = band.max || 1;
-    const med = band.median || 0;
-
-    const pos = ((med - min) / (max - min)) * 100;
-
-    let comps = (data.comps || []).slice(0, 5).map(c =>
-      `<div class="card">
-        💰 $${c.price}<br>
-        <a href="${c.url}" target="_blank">${c.title}</a>
-      </div>`
-    ).join("");
-
     out.innerHTML = `
       <div class="card">
         <div class="price">${data.estimated_value}</div>
-
         <div class="small">
           Range: ${data.range}<br>
           Sales: ${data.sales_found}<br>
-          Confidence: ${data.confidence}<br>
-          Accuracy: ${data.accuracy_score}%
+          Confidence: ${data.confidence || "N/A"}<br>
+          Accuracy: ${data.accuracy_score || "N/A"}%
         </div>
-
-        <div class="bar">
-          <div class="dot" style="left:${pos}%"></div>
-        </div>
-
-        <h3>Recent Sales</h3>
-        ${comps}
       </div>
     `;
 
