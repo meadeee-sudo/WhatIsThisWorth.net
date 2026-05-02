@@ -1,4 +1,4 @@
-rom flask import Flask, request, jsonify
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
 import time
@@ -12,7 +12,7 @@ import json
 
 app = Flask(__name__)
 
-# 🔥 CRITICAL: prevents slash redirects
+# 🔥 Prevent Flask slash redirect issues (important for eBay)
 app.url_map.strict_slashes = False
 
 CORS(app)
@@ -25,14 +25,14 @@ EBAY_VERIFICATION_TOKEN = os.getenv(
     "PUT_YOUR_TOKEN_HERE"
 )
 
-# 🔥 CANONICAL ENDPOINT (MUST MATCH EBAY CONFIG EXACTLY)
+# 🔥 CRITICAL: must match EXACTLY what you enter in eBay portal
 EBAY_ENDPOINT_URL = "https://whatisthisworth-net.onrender.com/ebay/account-deletion"
 
 # -----------------------------
 # CACHE
 # -----------------------------
 CACHE = {}
-CACHE_TTL = 60 * 60
+CACHE_TTL = 60 * 60  # 1 hour
 
 
 def get_cached(query):
@@ -229,7 +229,7 @@ def home():
 
 
 # -----------------------------
-# EBAY ACCOUNT DELETION
+# EBAY ACCOUNT DELETION ENDPOINT
 # -----------------------------
 @app.route("/ebay/account-deletion", methods=["GET", "POST"])
 def ebay_account_deletion():
@@ -247,18 +247,18 @@ def ebay_account_deletion():
         if not challenge_code:
             return jsonify({"error": "missing challenge_code"}), 400
 
-        # 🔥 FULLY CANONICAL (NO request-derived URL)
+        # 🔥 FULLY DETERMINISTIC INPUT (NO Flask URL guessing)
         raw = challenge_code + token + EBAY_ENDPOINT_URL
         sha = hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
-        response = jsonify({"challengeResponse": sha})
-        response.headers["Cache-Control"] = "no-store"
+        print("DEBUG RAW:", raw)
+        print("DEBUG SHA:", sha)
 
-        return response
+        return jsonify({"challengeResponse": sha})
 
 
     # -------------------------
-    # POST
+    # POST: notification event
     # -------------------------
     if request.method == "POST":
         try:
