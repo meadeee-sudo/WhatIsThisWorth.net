@@ -12,7 +12,7 @@ import json
 
 app = Flask(__name__)
 
-# IMPORTANT: remove redirect ambiguity
+# IMPORTANT: prevents Flask from redirecting /path vs /path/
 app.url_map.strict_slashes = False
 
 CORS(app)
@@ -22,48 +22,12 @@ CORS(app)
 # -----------------------------
 EBAY_VERIFICATION_TOKEN = os.getenv("EBAY_VERIFICATION_TOKEN", "PUT_YOUR_TOKEN_HERE")
 
-
-# -----------------------------
-# CACHE
-# -----------------------------
-CACHE = {}
-CACHE_TTL = 60 * 60
-
-
-def get_cached(query):
-    entry = CACHE.get(query)
-    if not entry:
-        return None
-    if time.time() - entry["time"] > CACHE_TTL:
-        del CACHE[query]
-        return None
-    return entry["data"]
-
-
-def set_cache(query, data):
-    CACHE[query] = {"time": time.time(), "data": data}
+# MUST EXACTLY MATCH eBay portal (no trailing slash)
+EBAY_ENDPOINT_URL = "https://whatisthisworth-net.onrender.com/ebay/account-deletion"
 
 
 # -----------------------------
-# SAFE REQUEST
-# -----------------------------
-def safe_get(url):
-    headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept": "text/html,application/xhtml+xml",
-        "Connection": "close"
-    }
-
-    try:
-        return requests.get(url, headers=headers, timeout=10)
-    except Exception as e:
-        print("REQUEST ERROR:", repr(e))
-        return None
-
-
-# -----------------------------
-# EBAY ACCOUNT DELETION WEBHOOK
+# EBAY WEBHOOK
 # -----------------------------
 @app.route("/ebay/account-deletion", methods=["GET", "POST"])
 def ebay_account_deletion():
@@ -73,7 +37,7 @@ def ebay_account_deletion():
         return jsonify({"error": "server misconfigured"}), 500
 
     # -------------------------
-    # GET CHALLENGE VALIDATION
+    # GET: eBay verification handshake
     # -------------------------
     if request.method == "GET":
 
@@ -81,34 +45,46 @@ def ebay_account_deletion():
         if not challenge_code:
             return jsonify({"error": "missing challenge_code"}), 400
 
-        # 🔥 CRITICAL FIX: use EXACT request URL eBay called
-        endpoint = request.base_url  # THIS is key (no guessing, no hardcoding)
+        # 🔥 CRITICAL FIX:
+        # NEVER use request.base_url (eBay rejects due to proxy variations)
+        endpoint = EBAY_ENDPOINT_URL
 
-        # MUST be EXACT ORDER:
+        # REQUIRED ORDER (DO NOT CHANGE):
+        # challengeCode + verificationToken + endpoint
         raw = challenge_code + token + endpoint
 
         sha = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+        print("DEBUG CHALLENGE:", challenge_code)
+        print("DEBUG ENDPOINT:", endpoint)
+        print("DEBUG RAW:", raw)
+        print("DEBUG SHA:", sha)
 
         response = jsonify({"challengeResponse": sha})
         response.headers["Content-Type"] = "application/json"
         response.headers["Cache-Control"] = "no-store"
 
-        print("DEBUG ENDPOINT:", endpoint)
-        print("DEBUG SHA:", sha)
-
-        return response
+        return response, 200
 
     # -------------------------
-    # POST EVENT
+    # POST: deletion notification
     # -------------------------
     if request.method == "POST":
-        data = request.get_json(force=True, silent=True)
-        print("eBay deletion event:", json.dumps(data, indent=2))
-        return jsonify({"status": "received"}), 200
+        try:
+            data = request.get_json(force=True, silent=True)
+
+            print("📩 eBay Account Deletion Event Received")
+            print(json.dumps(data, indent=2))
+
+            return jsonify({"status": "received"}), 200
+
+        except Exception as e:
+            print("POST ERROR:", repr(e))
+            return jsonify({"error": "bad request"}), 400
 
 
 # -----------------------------
-# BASIC ROUTES
+# HEALTH CHECK
 # -----------------------------
 @app.route("/")
 def home():
