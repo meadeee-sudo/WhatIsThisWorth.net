@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+rom flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
 import time
@@ -12,7 +12,7 @@ import json
 
 app = Flask(__name__)
 
-# 🔥 CRITICAL: prevents 308 redirect issues
+# 🔥 CRITICAL: prevents slash redirects
 app.url_map.strict_slashes = False
 
 CORS(app)
@@ -24,6 +24,9 @@ EBAY_VERIFICATION_TOKEN = os.getenv(
     "EBAY_VERIFICATION_TOKEN",
     "PUT_YOUR_TOKEN_HERE"
 )
+
+# 🔥 CANONICAL ENDPOINT (MUST MATCH EBAY CONFIG EXACTLY)
+EBAY_ENDPOINT_URL = "https://whatisthisworth-net.onrender.com/ebay/account-deletion"
 
 # -----------------------------
 # CACHE
@@ -244,16 +247,15 @@ def ebay_account_deletion():
         if not challenge_code:
             return jsonify({"error": "missing challenge_code"}), 400
 
-        # 🔥 CRITICAL: canonical URL (NO slash ambiguity)
-        endpoint_url = request.base_url
-
-        raw = f"{challenge_code}{token}{endpoint_url}"
+        # 🔥 FULLY CANONICAL (NO request-derived URL)
+        raw = challenge_code + token + EBAY_ENDPOINT_URL
         sha = hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
         response = jsonify({"challengeResponse": sha})
         response.headers["Cache-Control"] = "no-store"
 
         return response
+
 
     # -------------------------
     # POST
