@@ -224,12 +224,9 @@ def home():
 # -----------------------------
 # EBAY ACCOUNT DELETION (PRODUCTION HARDENED)
 # -----------------------------
-@app.route("/ebay/account-deletion", methods=["GET", "POST"])
+@app.route("/ebay/account-deletion/", methods=["GET", "POST"])
 def ebay_account_deletion():
 
-    # -------------------------
-    # VERIFY ENV CONFIG
-    # -------------------------
     token = EBAY_VERIFICATION_TOKEN
     if not token or token == "PUT_YOUR_TOKEN_HERE":
         return jsonify({"error": "server misconfigured"}), 500
@@ -243,8 +240,8 @@ def ebay_account_deletion():
         if not challenge_code:
             return jsonify({"error": "missing challenge_code"}), 400
 
-        # CRITICAL: use canonical URL (NOT request.url)
-        endpoint_url = "https://whatisthisworth-net.onrender.com/ebay/account-deletion"
+        # Canonical endpoint MUST match exactly eBay config
+        endpoint_url = "https://whatisthisworth-net.onrender.com/ebay/account-deletion/"
 
         raw = f"{challenge_code}{token}{endpoint_url}"
         sha = hashlib.sha256(raw.encode("utf-8")).hexdigest()
