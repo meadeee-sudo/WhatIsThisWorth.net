@@ -1,18 +1,13 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import requests
 import time
-import statistics
-from bs4 import BeautifulSoup
-import re
-from urllib.parse import quote_plus
 import os
 import hashlib
 import json
 
 app = Flask(__name__)
 
-# Prevent slash redirect mismatch issues
+# Prevent Flask redirect behavior (important)
 app.url_map.strict_slashes = False
 
 CORS(app)
@@ -26,33 +21,12 @@ EBAY_VERIFICATION_TOKEN = os.getenv(
 )
 
 # IMPORTANT:
-# This MUST EXACTLY match what you entered in eBay Developer Portal
+# MUST EXACTLY MATCH eBay Developer Portal
 EBAY_ENDPOINT = "https://whatisthisworth-net.onrender.com/ebay/account-deletion"
 
 
 # -----------------------------
-# CACHE
-# -----------------------------
-CACHE = {}
-CACHE_TTL = 60 * 60
-
-
-def get_cached(query):
-    entry = CACHE.get(query)
-    if not entry:
-        return None
-    if time.time() - entry["time"] > CACHE_TTL:
-        del CACHE[query]
-        return None
-    return entry["data"]
-
-
-def set_cache(query, data):
-    CACHE[query] = {"time": time.time(), "data": data}
-
-
-# -----------------------------
-# EBAY WEBHOOK
+# EBAY WEBHOOK ENDPOINT
 # -----------------------------
 @app.route("/ebay/account-deletion", methods=["GET", "POST"])
 def ebay_account_deletion():
@@ -62,7 +36,7 @@ def ebay_account_deletion():
         return jsonify({"error": "server misconfigured"}), 500
 
     # -------------------------
-    # GET (challenge handshake)
+    # GET: eBay handshake
     # -------------------------
     if request.method == "GET":
 
@@ -70,25 +44,26 @@ def ebay_account_deletion():
         if not challenge_code:
             return jsonify({"error": "missing challenge_code"}), 400
 
-        # 🔥 CRITICAL: EXACT ORDER REQUIRED BY EBAY
+        # 🔥 CRITICAL FIX:
+        # Use EXACT endpoint string eBay expects (no request.base_url, no request.url)
+        endpoint = EBAY_ENDPOINT.rstrip("/")
+
+        # IMPORTANT ORDER (eBay spec):
         # challengeCode + verificationToken + endpoint
-        raw = challenge_code + token + EBAY_ENDPOINT
+        raw = challenge_code + token + endpoint
 
         sha = hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
-        # Debug (safe to remove later)
+        # Debug logs (keep for now)
         print("DEBUG challenge_code:", challenge_code)
-        print("DEBUG endpoint:", EBAY_ENDPOINT)
+        print("DEBUG endpoint:", endpoint)
+        print("DEBUG raw:", raw)
         print("DEBUG sha:", sha)
 
-        response = jsonify({"challengeResponse": sha})
-        response.headers["Content-Type"] = "application/json"
-        response.headers["Cache-Control"] = "no-store"
-
-        return response
+        return jsonify({"challengeResponse": sha}), 200
 
     # -------------------------
-    # POST (real notifications)
+    # POST: notification event
     # -------------------------
     if request.method == "POST":
         data = request.get_json(force=True, silent=True)
@@ -100,16 +75,16 @@ def ebay_account_deletion():
 
 
 # -----------------------------
-# SEARCH ENDPOINT (optional)
+# BASIC ROUTES
 # -----------------------------
-@app.route("/search")
-def search():
-    return jsonify({"status": "ok"})
-
-
 @app.route("/")
 def home():
     return "WhatIsThisWorth running"
+
+
+@app.route("/search")
+def search():
+    return jsonify({"status": "ok"})
 
 
 # -----------------------------
