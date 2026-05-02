@@ -38,7 +38,11 @@ def get_ebay_token():
         "Content-Type": "application/x-www-form-urlencoded",
         "Authorization": f"Basic {encoded_auth}"
     }
-    payload = {"grant_type": "client_credentials", "scope": "https://api.ebay.com/oauth/api_scope"}
+    # IMPORTANT: Ensure your app in the eBay portal has the 'buy.item.summary' scope
+    payload = {
+        "grant_type": "client_credentials", 
+        "scope": "https://api.ebay.com/oauth/api_scope"
+    }
 
     res = requests.post(url, headers=headers, data=payload)
     if res.status_code == 200:
@@ -46,6 +50,7 @@ def get_ebay_token():
         _cached_token["access_token"] = data["access_token"]
         _cached_token["expires_at"] = now + data["expires_in"] - 60
         return data["access_token"]
+    print(f"OAUTH ERROR: {res.text}")
     return None
 
 # -----------------------------
@@ -57,34 +62,37 @@ def fetch_ebay_data(query):
 
     url = "https://api.ebay.com/buy/browse/v1/item_summary/search"
     
-    # BROADENING PARAMS: 
-    # Removed strict condition filters to ensure we get results first
     params = {
         "q": query,
-        "limit": 30,
-        "sort": "price" # Helpful for finding a baseline
+        "limit": 20
     }
     
     headers = {
         "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-        "X-EBAY-C-MARKETPLACE-ID": "EBAY_US" # ⚡ CRITICAL HEADER
+        "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
+        # ⚡ NEW: Contextual Location header helps bypass "0 results" issues
+        "X-EBAY-C-ENDUSERCTX": "contextualLocation=country%3DUS%2Czip%3D90802" 
     }
 
     try:
         res = requests.get(url, headers=headers, params=params)
+        print(f"EBAY API STATUS: {res.status_code}")
+        
         if res.status_code != 200:
-            print(f"DEBUG Error: {res.text}")
+            print(f"EBAY API ERROR: {res.text}")
             return []
         
-        items = res.json().get("itemSummaries", [])
+        data = res.json()
+        items = data.get("itemSummaries", [])
+        
         return [{
-            "title": i["title"],
+            "title": i.get("title"),
             "price": float(i["price"]["value"]),
             "url": i.get("itemWebUrl"),
             "thumbnail": i.get("image", {}).get("imageUrl")
-        } for i in items]
-    except:
+        } for i in items if "price" in i]
+    except Exception as e:
+        print(f"FETCH EXCEPTION: {e}")
         return []
 
 # -----------------------------
@@ -98,20 +106,17 @@ def search_route():
     comps = fetch_ebay_data(q)
     
     if not comps:
-        return jsonify({"comps": [], "estimated_value": "N/A", "sales_found": 0})
+        # Check logs if this returns
+        return jsonify({"comps": [], "estimated_value": "N/A", "sales_found": 0, "debug": "Check Render logs for API errors"})
 
     prices = sorted([c["price"] for c in comps])
-    # Basic outlier removal
-    if len(prices) > 4:
-        prices = prices[1:-1]
-
     median = statistics.median(prices)
     
     return jsonify({
         "estimated_value": f"${int(median)}",
         "range": f"${int(min(prices))} - ${int(max(prices))}",
         "sales_found": len(comps),
-        "comps": comps[:15]
+        "comps": comps
     })
 
 @app.route("/ebay/account-deletion", methods=["GET", "POST"])
@@ -122,6 +127,10 @@ def account_deletion():
         sha = hashlib.sha256(raw.encode("utf-8")).hexdigest()
         return jsonify({"challengeResponse": sha}), 200
     return jsonify({"status": "received"}), 200
+
+@app.route("/")
+def home():
+    return "WhatIsThisWorth API Active"
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
