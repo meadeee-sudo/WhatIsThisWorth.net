@@ -14,7 +14,7 @@ CORS(app)
 # CACHE
 # -----------------------------
 CACHE = {}
-CACHE_TTL = 60 * 60
+CACHE_TTL = 60 * 60  # 1 hour
 
 
 def get_cached(query):
@@ -48,18 +48,13 @@ def safe_get(url):
 
     print("🌐 REQUESTING:", url)
 
-    for attempt in range(3):
-        try:
-            res = requests.get(url, headers=headers, timeout=10)
-            print("🌐 STATUS:", res.status_code)
-            return res
-
-        except Exception as e:
-            print(f"❌ REQUEST ERROR (attempt {attempt+1}):", repr(e))
-            time.sleep(1)
-
-    print("❌ ALL REQUEST ATTEMPTS FAILED")
-    return None
+    try:
+        res = requests.get(url, headers=headers, timeout=10)
+        print("🌐 STATUS:", res.status_code)
+        return res
+    except Exception as e:
+        print("❌ REQUEST ERROR:", repr(e))
+        return None
 
 
 # -----------------------------
@@ -84,121 +79,128 @@ def parse_price(text):
 
 
 # -----------------------------
-# EBAY SCRAPER (FIXED URL STRUCTURE)
+# OUTLIER FILTER (IMPORTANT UPGRADE)
+# -----------------------------
+def remove_outliers(prices):
+    if len(prices) < 5:
+        return prices
+
+    sorted_prices = sorted(prices)
+
+    # trim top and bottom 10%
+    trim = max(1, int(len(sorted_prices) * 0.1))
+    return sorted_prices[trim:-trim] if len(sorted_prices) > 2 * trim else sorted_prices
+
+
+# -----------------------------
+# SCRAPER
 # -----------------------------
 def fetch_from_scrape(query):
     print("🔥 SCRAPER FUNCTION ENTERED")
 
-    try:
-        encoded_query = quote_plus(query)
+    encoded_query = quote_plus(query)
 
-        # ✅ FIXED: more browser-like eBay search URL
-        url = (
-            "https://www.ebay.com/sch/i.html"
-            f"?_from=R40&_nkw={encoded_query}"
-            "&_sacat=0"
-            "&LH_Sold=1"
-            "&LH_Complete=1"
-            "&_ipg=50"
-        )
+    url = (
+        "https://www.ebay.com/sch/i.html"
+        f"?_nkw={encoded_query}"
+        "&LH_Sold=1"
+        "&LH_Complete=1"
+        "&_ipg=50"
+    )
 
-        res = safe_get(url)
+    res = safe_get(url)
 
-        if not res:
-            print("❌ NO RESPONSE OBJECT")
-            return []
-
-        print("HTML SIZE:", len(res.text))
-        print("HAS s-item:", "s-item" in res.text)
-
-        soup = BeautifulSoup(res.text, "html.parser")
-
-        comps = []
-
-        items = soup.select("li.s-item")
-        print("RAW ITEMS:", len(items))
-
-        for item in items:
-            try:
-                title_el = item.select_one(".s-item__title")
-                price_el = item.select_one(".s-item__price")
-                link_el = item.select_one("a")
-
-                if not title_el or not price_el:
-                    continue
-
-                title = title_el.get_text(strip=True)
-                price = parse_price(price_el.get_text())
-                url = link_el["href"] if link_el and link_el.has_attr("href") else None
-
-                if not title or price is None:
-                    continue
-
-                comps.append({
-                    "title": title,
-                    "price": price,
-                    "url": url
-                })
-
-            except Exception as e:
-                print("ITEM PARSE ERROR:", e)
-                continue
-
-        print("VALID COMPS:", len(comps))
-
-        return comps
-
-    except Exception as e:
-        print("SCRAPER CRASH:", repr(e))
+    if not res or res.status_code != 200:
         return []
 
+    soup = BeautifulSoup(res.text, "html.parser")
+    items = soup.select("li.s-item")
+
+    comps = []
+
+    for item in items:
+        try:
+            title_el = item.select_one(".s-item__title")
+            price_el = item.select_one(".s-item__price")
+            link_el = item.select_one("a")
+
+            if not title_el or not price_el:
+                continue
+
+            title = title_el.get_text(strip=True)
+            price = parse_price(price_el.get_text())
+            url = link_el["href"] if link_el and link_el.has_attr("href") else None
+
+            if not title or price is None:
+                continue
+
+            comps.append({
+                "title": title,
+                "price": price,
+                "url": url
+            })
+
+        except Exception:
+            continue
+
+    return comps
+
 
 # -----------------------------
-# ESTIMATE
+# CONFIDENCE MODEL
+# -----------------------------
+def confidence_level(count, spread):
+    if count < 5:
+        return "low"
+    if spread > 0.5:  # high variance
+        return "medium-low"
+    if count < 15:
+        return "medium"
+    return "high"
+
+
+# -----------------------------
+# ESTIMATE ENGINE
 # -----------------------------
 def estimate(query):
+    if not query:
+        return {"error": "missing query"}
+
     cached = get_cached(query)
     if cached:
         return cached
 
     comps = fetch_from_scrape(query)
 
-    if len(comps) == 0:
+    if not comps:
         result = {
-            "debug": "no comps returned",
             "estimated_value": "N/A",
             "range": "N/A",
             "sales_found": 0,
-            "comps": [],
-            "confidence": "No data"
+            "confidence": "no data",
+            "comps": []
         }
         set_cache(query, result)
         return result
 
     prices = [c["price"] for c in comps]
 
-    median = int(statistics.median(prices))
-    low = int(min(prices))
-    high = int(max(prices))
+    # CLEAN DATA
+    filtered = remove_outliers(prices)
 
-    comps_sorted = sorted(comps, key=lambda x: x["price"])
+    median = statistics.median(filtered)
+    low = min(filtered)
+    high = max(filtered)
+
+    spread = (high - low) / median if median else 0
 
     result = {
-        "debug": "success",
-        "estimated_value": f"${median}",
-        "range": f"${low} - ${high}",
-        "sales_found": len(comps_sorted),
+        "estimated_value": f"${int(median)}",
+        "range": f"${int(low)} - ${int(high)}",
+        "sales_found": len(comps),
+        "confidence": confidence_level(len(comps), spread),
 
-        "comps": [
-            {
-                "title": c["title"],
-                "price": c["price"],
-                "url": c["url"]
-            }
-            for c in comps_sorted[:20]
-        ],
-
-        "confidence": "Based on real sold listings"
+        "comps": sorted(comps, key=lambda x: x["price"])[:20]
     }
 
     set_cache(query, result)
@@ -206,28 +208,22 @@ def estimate(query):
 
 
 # -----------------------------
-# ROUTE
+# ROUTES
 # -----------------------------
 @app.route("/search")
 def search():
     print("🔥 SEARCH ROUTE HIT")
 
-    q = request.args.get("q")
-    print("QUERY RECEIVED:", q)
+    q = request.args.get("q", "")
 
     result = estimate(q)
-
-    print("🔥 FINAL RESULT KEYS:", list(result.keys()) if result else None)
 
     return jsonify(result)
 
 
-# -----------------------------
-# HEALTH CHECK
-# -----------------------------
 @app.route("/")
 def home():
-    return "WhatIsThisWorth - Sold Comps Engine Running"
+    return "WhatIsThisWorth - MVP Engine Running"
 
 
 # -----------------------------
