@@ -6,9 +6,20 @@ import statistics
 from bs4 import BeautifulSoup
 import re
 from urllib.parse import quote_plus
+import os
+import hashlib
+import json
 
 app = Flask(__name__)
 CORS(app)
+
+# -----------------------------
+# CONFIG
+# -----------------------------
+EBAY_VERIFICATION_TOKEN = os.getenv(
+    "EBAY_VERIFICATION_TOKEN",
+    "PUT_YOUR_TOKEN_HERE"
+)
 
 # -----------------------------
 # CACHE
@@ -79,16 +90,15 @@ def parse_price(text):
 
 
 # -----------------------------
-# OUTLIER FILTER (IMPORTANT UPGRADE)
+# OUTLIER FILTER
 # -----------------------------
 def remove_outliers(prices):
     if len(prices) < 5:
         return prices
 
     sorted_prices = sorted(prices)
-
-    # trim top and bottom 10%
     trim = max(1, int(len(sorted_prices) * 0.1))
+
     return sorted_prices[trim:-trim] if len(sorted_prices) > 2 * trim else sorted_prices
 
 
@@ -152,7 +162,7 @@ def fetch_from_scrape(query):
 def confidence_level(count, spread):
     if count < 5:
         return "low"
-    if spread > 0.5:  # high variance
+    if spread > 0.5:
         return "medium-low"
     if count < 15:
         return "medium"
@@ -184,8 +194,6 @@ def estimate(query):
         return result
 
     prices = [c["price"] for c in comps]
-
-    # CLEAN DATA
     filtered = remove_outliers(prices)
 
     median = statistics.median(filtered)
@@ -199,7 +207,6 @@ def estimate(query):
         "range": f"${int(low)} - ${int(high)}",
         "sales_found": len(comps),
         "confidence": confidence_level(len(comps), spread),
-
         "comps": sorted(comps, key=lambda x: x["price"])[:20]
     }
 
@@ -216,14 +223,53 @@ def search():
 
     q = request.args.get("q", "")
 
-    result = estimate(q)
-
-    return jsonify(result)
+    return jsonify(estimate(q))
 
 
 @app.route("/")
 def home():
     return "WhatIsThisWorth - MVP Engine Running"
+
+
+# -----------------------------
+# EBAY ACCOUNT DELETION ENDPOINT
+# -----------------------------
+@app.route("/ebay/account-deletion", methods=["GET", "POST"])
+def ebay_account_deletion():
+
+    # -------------------------
+    # Verification handshake
+    # -------------------------
+    if request.method == "GET":
+        challenge_code = request.args.get("challenge_code")
+
+        if not challenge_code:
+            return jsonify({"error": "missing challenge_code"}), 400
+
+        endpoint_url = request.url.split("?")[0]
+
+        raw = challenge_code + EBAY_VERIFICATION_TOKEN + endpoint_url
+        sha = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+        return jsonify({"challengeResponse": sha})
+
+    # -------------------------
+    # Notification event
+    # -------------------------
+    if request.method == "POST":
+        try:
+            data = request.get_json()
+
+            print("📩 eBay Account Deletion Event Received")
+            print(json.dumps(data, indent=2))
+
+            # You can store this in DB later if needed
+
+            return jsonify({"status": "received"}), 200
+
+        except Exception as e:
+            print("❌ POST error:", repr(e))
+            return jsonify({"error": "bad request"}), 400
 
 
 # -----------------------------
