@@ -11,6 +11,10 @@ import hashlib
 import json
 
 app = Flask(__name__)
+
+# 🔥 CRITICAL: prevents 308 redirect issues
+app.url_map.strict_slashes = False
+
 CORS(app)
 
 # -----------------------------
@@ -25,7 +29,7 @@ EBAY_VERIFICATION_TOKEN = os.getenv(
 # CACHE
 # -----------------------------
 CACHE = {}
-CACHE_TTL = 60 * 60  # 1 hour
+CACHE_TTL = 60 * 60
 
 
 def get_cached(query):
@@ -222,9 +226,9 @@ def home():
 
 
 # -----------------------------
-# EBAY ACCOUNT DELETION (PRODUCTION HARDENED)
+# EBAY ACCOUNT DELETION
 # -----------------------------
-@app.route("/ebay/account-deletion/", methods=["GET", "POST"])
+@app.route("/ebay/account-deletion", methods=["GET", "POST"])
 def ebay_account_deletion():
 
     token = EBAY_VERIFICATION_TOKEN
@@ -240,8 +244,8 @@ def ebay_account_deletion():
         if not challenge_code:
             return jsonify({"error": "missing challenge_code"}), 400
 
-        # 🔥 CRITICAL FIX: use EXACT request URL eBay hit (normalized)
-        endpoint_url = request.base_url.rstrip("/")
+        # 🔥 CRITICAL: canonical URL (NO slash ambiguity)
+        endpoint_url = request.base_url
 
         raw = f"{challenge_code}{token}{endpoint_url}"
         sha = hashlib.sha256(raw.encode("utf-8")).hexdigest()
@@ -252,7 +256,7 @@ def ebay_account_deletion():
         return response
 
     # -------------------------
-    # POST: notification event
+    # POST
     # -------------------------
     if request.method == "POST":
         try:
