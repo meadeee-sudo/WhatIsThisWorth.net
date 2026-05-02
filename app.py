@@ -240,8 +240,8 @@ def ebay_account_deletion():
         if not challenge_code:
             return jsonify({"error": "missing challenge_code"}), 400
 
-        # Canonical endpoint MUST match exactly eBay config
-        endpoint_url = "https://whatisthisworth-net.onrender.com/ebay/account-deletion/"
+        # 🔥 CRITICAL FIX: use EXACT request URL eBay hit (normalized)
+        endpoint_url = request.base_url.rstrip("/")
 
         raw = f"{challenge_code}{token}{endpoint_url}"
         sha = hashlib.sha256(raw.encode("utf-8")).hexdigest()
