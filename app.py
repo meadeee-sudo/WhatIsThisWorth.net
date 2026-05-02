@@ -57,12 +57,8 @@ def safe_get(url):
         "Connection": "close"
     }
 
-    print("🌐 REQUESTING:", url)
-
     try:
-        res = requests.get(url, headers=headers, timeout=10)
-        print("🌐 STATUS:", res.status_code)
-        return res
+        return requests.get(url, headers=headers, timeout=10)
     except Exception as e:
         print("❌ REQUEST ERROR:", repr(e))
         return None
@@ -106,8 +102,6 @@ def remove_outliers(prices):
 # SCRAPER
 # -----------------------------
 def fetch_from_scrape(query):
-    print("🔥 SCRAPER FUNCTION ENTERED")
-
     encoded_query = quote_plus(query)
 
     url = (
@@ -119,7 +113,6 @@ def fetch_from_scrape(query):
     )
 
     res = safe_get(url)
-
     if not res or res.status_code != 200:
         return []
 
@@ -219,10 +212,7 @@ def estimate(query):
 # -----------------------------
 @app.route("/search")
 def search():
-    print("🔥 SEARCH ROUTE HIT")
-
     q = request.args.get("q", "")
-
     return jsonify(estimate(q))
 
 
@@ -232,38 +222,47 @@ def home():
 
 
 # -----------------------------
-# EBAY ACCOUNT DELETION ENDPOINT
+# EBAY ACCOUNT DELETION (PRODUCTION HARDENED)
 # -----------------------------
 @app.route("/ebay/account-deletion", methods=["GET", "POST"])
 def ebay_account_deletion():
 
     # -------------------------
-    # Verification handshake
+    # VERIFY ENV CONFIG
+    # -------------------------
+    token = EBAY_VERIFICATION_TOKEN
+    if not token or token == "PUT_YOUR_TOKEN_HERE":
+        return jsonify({"error": "server misconfigured"}), 500
+
+    # -------------------------
+    # GET: eBay handshake
     # -------------------------
     if request.method == "GET":
-        challenge_code = request.args.get("challenge_code")
 
+        challenge_code = request.args.get("challenge_code")
         if not challenge_code:
             return jsonify({"error": "missing challenge_code"}), 400
 
-        endpoint_url = request.url.split("?")[0]
+        # CRITICAL: use canonical URL (NOT request.url)
+        endpoint_url = "https://whatisthisworth-net.onrender.com/ebay/account-deletion"
 
-        raw = challenge_code + EBAY_VERIFICATION_TOKEN + endpoint_url
+        raw = f"{challenge_code}{token}{endpoint_url}"
         sha = hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
-        return jsonify({"challengeResponse": sha})
+        response = jsonify({"challengeResponse": sha})
+        response.headers["Cache-Control"] = "no-store"
+
+        return response
 
     # -------------------------
-    # Notification event
+    # POST: notification event
     # -------------------------
     if request.method == "POST":
         try:
-            data = request.get_json()
+            data = request.get_json(force=True, silent=True)
 
             print("📩 eBay Account Deletion Event Received")
             print(json.dumps(data, indent=2))
-
-            # You can store this in DB later if needed
 
             return jsonify({"status": "received"}), 200
 
