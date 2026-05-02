@@ -12,7 +12,7 @@ import json
 
 app = Flask(__name__)
 
-# 🔥 Prevent Flask slash redirect issues (important for eBay)
+# 🔥 Prevent redirect issues (CRITICAL for webhook validation)
 app.url_map.strict_slashes = False
 
 CORS(app)
@@ -25,8 +25,9 @@ EBAY_VERIFICATION_TOKEN = os.getenv(
     "PUT_YOUR_TOKEN_HERE"
 )
 
-# 🔥 CRITICAL: must match EXACTLY what you enter in eBay portal
+# 🔥 MUST EXACTLY MATCH eBay portal entry
 EBAY_ENDPOINT_URL = "https://whatisthisworth-net.onrender.com/ebay/account-deletion"
+
 
 # -----------------------------
 # CACHE
@@ -247,8 +248,8 @@ def ebay_account_deletion():
         if not challenge_code:
             return jsonify({"error": "missing challenge_code"}), 400
 
-        # 🔥 FULLY DETERMINISTIC INPUT (NO Flask URL guessing)
-        raw = challenge_code + token + EBAY_ENDPOINT_URL
+        # 🔥 FINAL FIX: correct canonical order (THIS is what eBay expects)
+        raw = challenge_code + EBAY_ENDPOINT_URL + token
         sha = hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
         print("DEBUG RAW:", raw)
